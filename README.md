@@ -6,9 +6,9 @@ Videos of interacting humans are converted into time series data with [OpenPose]
 
 This repository provides Python code and annotated Jupyter notebooks to perform these actions.
 
-Step 1: Process a video (or videos) with OpenPose, creating a JSON file with wireframe data for all identified persons ('actors'). 
-Step 2: Extract JSON data to numpy and perform basic validations (identifying individuals over time, tagging windows of interest, handle missing data).
-Step 3: Calculated cross-correlations, Granger Causality (and other measures) between actors in dataset. 
+* Step 1: Process a video (or videos) with OpenPose, creating a JSON file with wireframe data for all identified persons ('actors'). 
+* Step 2: Extract JSON data to numpy and perform basic validations (identifying individuals over time, tagging windows of interest, handle missing data).
+* Step 3: Calculated cross-correlations, Granger Causality (and other measures) between actors in dataset. 
 
 Todo: 
 A tutorial is providing using an example of mother infant interaction. 
