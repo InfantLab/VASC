@@ -10,10 +10,21 @@ This repository provides Python code and annotated Jupyter notebooks to perform 
 * Step 2: Extract JSON data to numpy and perform basic validations (identifying individuals over time, tagging windows of interest, handle missing data).
 * Step 3: Calculated cross-correlations, Granger Causality (and other measures) between actors in dataset. 
 
-Todo: 
+## Installation
+
+To get this script working on a new system you need to do the following
+
+1. You need a working Python 3.7 environment with support for Jupyter notebooks. The easiest way to do this is to install [Anaconda](https://www.anaconda.com/distribution/).
+2. Install [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose)
+3. Next you need to download the trained neural-network models that OpenPose uses. To do this go to the `models` subdirectory of OpenPose directory, and double-click / run the `models.bat` script.
+3. Install OpenCV2 
+
+### Todo: 
 A tutorial is providing using an example of mother infant interaction. 
 
-Funding:
+
+
+#### Funding:
 This project was supported by the Royal Academy of Engineering Global Challenges Research Fund 
 Grant:
 [Frontiers of Development](https://www.raeng.org.uk/grants-and-prizes/grants/international-research-and-collaborations/frontiers/frontiers-of-development) - Tranche 2 - FoDSF\1920\2\100020
