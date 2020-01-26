@@ -2,6 +2,8 @@
 ### Created by Caspar Addyman <c.addyman@gold.ac.uk>
 #### Goldsmiths, University of London, 2020
 
+_Version - Not even alpha!_
+
 Videos of interacting humans are converted into time series data with [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose). The data are processed and then various statistical measures of synchrony and causality between actors are calculated using [scipy](https://www.scipy.org/scipylib/index.html).
 
 This repository provides Python code and annotated Jupyter notebooks to perform these actions.
