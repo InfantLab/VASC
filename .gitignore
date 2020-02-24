@@ -1,0 +1,6 @@
+
+*.ipynb
+.ipynb_checkpoints/README-checkpoint.md
+.ipynb_checkpoints/vasc-checkpoint.py
+.ipynb_checkpoints/videos-checkpoint.json
+__pycache__/vasc.cpython-37.pyc
