@@ -3,6 +3,7 @@
 # support functions
 
 import cv2
+import numpy as np
 
 # OpenPose has two main body models COCO with 18 points and BODY-25 with 25.
 # The default (and better model) is BODY-25. Here we provide the labelling for
@@ -93,10 +94,12 @@ def xyc (coords):
     return xs,ys,cs
 
 xs, ys, cs = xyc(list(range(nPoints)))
+xys = xs + ys
+
 #same for head
 head = [0, 15, 16, 17, 18]
 headx, heady, headc = xyc(head)
-
+headxys = headx + heady
 
 
 def video_to_frames(input_loc, output_loc):
@@ -183,10 +186,10 @@ def diffKeypoints(keypoints1,keypoints2,indices):
     """
     out = []
     for i in indices:
-        if keypoints1[i]>0 and keypoints2[i]:
-            out.append(keypoints1[i] - keypoints2[i])
+        if keypoints1[i]>0 and keypoints2[i]>0:
+            out.append(abs(keypoints1[i] - keypoints2[i]))
         else:
-            out.append(None)
+            out.append(np.nan)
     return out
 
 def getframeimage(videopath,framenumber):
@@ -221,6 +224,14 @@ def drawLines(frame, framekeypoints, people):
                 cv2.line(frame, (A[0], A[1]), (B[0], B[1]), pointcolors[i], 2, cv2.LINE_AA)
 
 def drawBodyCG(frame, framekeypoints, people):
+    """Function to draw centre of gravity for the points of a wireframe
+    Args:
+        frame: the image we are drawing to
+        framekeypoints: the keypoints array.
+        people: how many people are there?
+    Returns:
+        diff per index (if any i)
+    """
     font = cv2.FONT_HERSHEY_SIMPLEX
     fontScale = 1.0
     for p in range(people):
