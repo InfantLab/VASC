@@ -314,3 +314,44 @@ def fixpeopleSeries(keypoints_array,v,c,people, start, end):
             if key_min != p1:
                 #swap the rest of series between these two 
                 keypoints_array = swapSeries(keypoints_array,v,c,p1,key_min,f+1,end)
+
+                
+                
+def swapCameras(videos, keypoints_array,vidx,cam1,cam2):
+    """helper function for swapping secondary camera angle to main camera.
+    Usually this means to 'camera1' but we make the routine more general. 
+    We need to swap the json labels and the keypoints_array. We use the v & c indices stored in the json file.
+    Args:
+        keypoints_array: all the data.
+        vidx: which video? - specifies first dimension of array
+        cam1: which cam to swap 1
+        cam2: which cam to swap 2
+        start: where in time series do we start? (TODO can be blank - start at beginning)
+        end: where in time series do we end? (TODO can be blank - to end)
+    Returns:
+        a rearranged keypoints_array
+    """
+    v1 = videos[vidx][cam1]["v"]
+    c1 = videos[vidx][cam1]["c"]
+    v2 = videos[vidx][cam2]["v"]
+    c2 = videos[vidx][cam2]["c"]
+    
+    #swap the video info
+    temp = videos[vidx][cam1]
+    videos[vidx][cam1] = videos[vidx][cam2]
+    videos[vidx][cam2] = temp
+    
+    #swap the data
+    temp = np.copy(keypoints_array[v1,c1,:,:,:])  #temporary copy pers1 
+    keypoints_array[v1,c1,:,:,:] = keypoints_array[v2,c2,:,:,:] #pers2 to pers 1
+    keypoints_array[v2,c2,:,:,:] = temp
+    
+    
+    #finally swap the indices of the data to reference their new positions
+    #Yes, this seems weird but it is correct!
+    videos[vidx][cam1]["v"] = v1
+    videos[vidx][cam1]["c"] = c1
+    videos[vidx][cam2]["v"] = v2
+    videos[vidx][cam2]["c"] = c2
+    
+    return videos, keypoints_array
