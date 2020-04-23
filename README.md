@@ -26,8 +26,17 @@ A tutorial is providing using an example of mother infant interaction.
 
 
 
+#### Scientific Background
+These tools were developed for a scientific project that was aims to see if parents and babies move in synchrony with each other and whether this predicts caring outcomes. The details are found here:
+
+_Automated measurement of responsive caregiving at scale using machine learning._
+Royal Academy of Engineering  / Global Challenges Research Fund
+[Overview document](https://docs.google.com/document/d/1FoBBY_XxHAFbsKjmJ1Q1dIbDrpovvo3xLh1GNzJ1ziU/edit)
+
 #### Funding:
 This project was supported by the Royal Academy of Engineering Global Challenges Research Fund 
 Grant:
 [Frontiers of Development](https://www.raeng.org.uk/grants-and-prizes/grants/international-research-and-collaborations/frontiers/frontiers-of-development) - Tranche 2 - FoDSF\1920\2\100020
+
+
 

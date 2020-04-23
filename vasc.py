@@ -244,3 +244,114 @@ def drawBodyCG(frame, framekeypoints, people):
 
         txtloc = tuple((int(avx) - 50,int(avy) - 30))
         cv2.putText(frame, str(p), txtloc, font, fontScale, personcolors[p])
+
+def swapSeries(keypoints_array,v,c,pers1,pers2,start,end):
+    """helper function for swapping sections of time series. This is useful because openpose isn't
+       consistent in labelling people so we need to rearrange things.
+    Args:
+        keypoints_array: all the data.
+        v: which video? - specifies first dimension of array
+        c: which camera? specifies second dimension of array
+        pers1: which people to swap 1
+        pers2: which people to swap 2
+        start: where in time series do we start? (TODO can be blank - start at beginning)
+        end: where in time series do we end? (TODO can be blank - to end)
+    Returns:
+        a rearranged keypoints_array
+    """
+    temp = np.copy(keypoints_array[v,c,start:end,pers1,:])  #temporary copy pers1 
+    keypoints_array[v,c,start:end,pers1,:] = keypoints_array[v,c,start:end,pers2,:] #pers2 to pers 1
+    keypoints_array[v,c,start:end,pers2,:] = temp
+    
+    return keypoints_array
+        
+def deleteSeries(keypoints_array,v,c,pers,start,end):
+    """helper function for deleting time series that aren't parent or child.
+    Args:
+        keypoints_array: all the data.
+        v: which video? - specifies first dimension of array
+        c: which camera? - specifies second dimension of array
+        pers: which person to delete
+        start: where in time series do we start? (TODO can be blank - start at beginning)
+        end: where in time series do we end? (TODO can be blank - to end)
+    Returns:
+        a rearranged keypoints_array
+    """
+    #simply set all these values to zero
+    keypoints_array[v,c,start:end,pers,:] = 0
+    #TODO - update the corresponding json file.
+    return keypoints_array
+    
+def fixpeopleSeries(keypoints_array,v,c,people, start, end):
+    """ openpose isn't consistent in labelling people (person 1 could be labeled pers 2 in next frame).
+    So we go through frame by frame and label people in new frame with index of nearest person from previous frame. This *should* fix things.
+    I have horrible feeling it will get messed up by missing data. Let's find out..
+    Args:
+        keypoints_array: all the data.
+        v: which video? - specifies first dimension of array
+        c: which camera? - specifies first dimension of array
+        people: list of all people we are comparing. 
+        start: where in time series do we start? (TODO can be blank - start at beginning)
+        end: where in time series do we end? (TODO can be blank - to end)
+    Returns:
+        a rearranged keypoints_array
+    """
+    #This may get messy!
+    for f in range(start,end-1):
+        print ("frame ", '{:4d}'.format(f))
+        # we loop through all pairs of people
+        for p1 in range(len(people)-1):
+            r1 = people[p1] #what row is this?
+            whosleft = range(p1,len(people))
+            delta = {}
+            for p2 in whosleft: 
+                r2 = people[p2] #what row is this?
+                delta[p2] = diffKeypoints(keypoints_array[v,c,f,p1,:],keypoints_array[v,c,f+1,p2,:],xys)
+                print(p1,p2,np.nansum(delta[p2]),any(np.isfinite(delta[p2])))
+            #this next line finds the minimum & non-null value
+            key_min = min(np.nansum(delta.keys()), key=(lambda k: delta[k]))
+            print (key_min)
+            if key_min != p1:
+                #swap the rest of series between these two 
+                keypoints_array = swapSeries(keypoints_array,v,c,p1,key_min,f+1,end)
+
+                
+                
+def swapCameras(videos, keypoints_array,vidx,cam1,cam2):
+    """helper function for swapping secondary camera angle to main camera.
+    Usually this means to 'camera1' but we make the routine more general. 
+    We need to swap the json labels and the keypoints_array. We use the v & c indices stored in the json file.
+    Args:
+        keypoints_array: all the data.
+        vidx: which video? - specifies first dimension of array
+        cam1: which cam to swap 1
+        cam2: which cam to swap 2
+        start: where in time series do we start? (TODO can be blank - start at beginning)
+        end: where in time series do we end? (TODO can be blank - to end)
+    Returns:
+        a rearranged keypoints_array
+    """
+    v1 = videos[vidx][cam1]["v"]
+    c1 = videos[vidx][cam1]["c"]
+    v2 = videos[vidx][cam2]["v"]
+    c2 = videos[vidx][cam2]["c"]
+    
+    #swap the video info
+    temp = videos[vidx][cam1]
+    videos[vidx][cam1] = videos[vidx][cam2]
+    videos[vidx][cam2] = temp
+    
+    #swap the data
+    temp = np.copy(keypoints_array[v1,c1,:,:,:])  #temporary copy pers1 
+    keypoints_array[v1,c1,:,:,:] = keypoints_array[v2,c2,:,:,:] #pers2 to pers 1
+    keypoints_array[v2,c2,:,:,:] = temp
+    
+    
+    #finally swap the indices of the data to reference their new positions
+    #Yes, this seems weird but it is correct!
+    videos[vidx][cam1]["v"] = v1
+    videos[vidx][cam1]["c"] = c1
+    videos[vidx][cam2]["v"] = v2
+    videos[vidx][cam2]["c"] = c2
+    
+    return videos, keypoints_array
