@@ -4,6 +4,7 @@
 
 import cv2
 import numpy as np
+import pandas as pd
 
 # OpenPose has two main body models COCO with 18 points and BODY-25 with 25.
 # The default (and better model) is BODY-25. Here we provide the labelling for
@@ -97,7 +98,7 @@ xs, ys, cs = xyc(list(range(nPoints)))
 xys = xs + ys
 
 #same for head
-head = [0, 15, 16, 17, 18]
+head = [0, 1, 15, 16, 17, 18]
 headx, heady, headc = xyc(head)
 headxys = headx + heady
 
@@ -171,6 +172,51 @@ def averagePoint(keypointList,indices):
         return tot / N
     else:
         return 0  # or None?
+
+def averageCoordinateTimeSeries(df,indices,videos = "All", people = "Both"):
+    """Function to find the average of a set of coordinates from the person location time series.
+    This helps track their centre of mass or the movements of the head, etc. 
+    It will take the average of the non-zero keypoints
+    Args:
+        df: timeseries dataframe.
+        video: which video set is this? Default "All" of them
+        who: which person (infant or parent)? Default "Both"
+        indices: if this is a list then we average over indices in list.
+                 if it is a dictionary we average over indices in each item
+    Returns:
+        Average across each row for this subset of columns
+    """
+    
+    if videos == "All": 
+        #include all the videos
+        videos = list(df.columns.levels[0])
+        
+    if people == "Both":
+        #include parent and infant
+        people = list(df.columns.levels[1])
+    
+    if isinstance(indices, list):
+        #indices is a set of coordinates
+        #so create a dictionary containing them 
+        indices = {"avg": indices}
+    
+    #list of different averages do take for each person?
+    idxs =indices.keys()
+    
+    col_index = pd.MultiIndex.from_product([videos,people,idxs], names=['video','person','avgs'])
+
+    avgdf = pd.DataFrame(columns=col_index)
+    #average per video per person per subset of indices
+    for vid in videos:
+        for pers in people:
+            for subidx in indices:
+                #dataframes make averaging nice and easy.
+                #avg by vid by pers by subidx 
+                avgdf[(vid,pers,subidx)] = df[(vid,pers)][indices[subidx]].mean(axis=1)
+    
+        
+    return avgdf
+
 
 def diffKeypoints(keypoints1,keypoints2,indices):
     """Function to find how far apart one set of points is from another.
