@@ -11,7 +11,7 @@ import pandas as pd
 # all the points and their relationships to enable us to redraw the wireframes.
 #info founnd in https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp
 
-nPoints =25
+
 # what body part is that?
 keypointsMapping = {0:  "Nose",
                     1:  "Neck",
@@ -94,14 +94,26 @@ def xyc (coords):
     cs = [x + 2 for x in xs]
     return xs,ys,cs
 
+nPoints =25
 xs, ys, cs = xyc(list(range(nPoints)))
 xys = xs + ys
+xys.sort() # sort for clarity
 
-#same for head
+#same for head, arms, legs
 head = [0, 1, 15, 16, 17, 18]
 headx, heady, headc = xyc(head)
 headxys = headx + heady
+headxys.sort()  # sort for clarity
 
+arms =  [2, 3, 4, 5, 6, 7]
+armsx, armsy, armsc = xyc(arms)
+armsxys = armsx + armsy
+armsxys.sort()
+
+legs = [22, 23, 24, 11, 10, 9, 8, 12, 13, 14, 19, 20 ,21]
+legsx, legsy, legsc = xyc(legs)
+legsxys = legsx + legsy
+legsxys.sort()
 
 def video_to_frames(input_loc, output_loc):
     """Function to extract frames from input video file
