@@ -86,8 +86,7 @@
 #
 # ```conda install -c conda-forge jupytext```
 
-# ### 0.5 Notebook extensions
-#
+# ### 0.5 Notebook extensions (optional)
 # Installing Jupyter notebook extenstions provide some useful tools for navigating notebooks (e.g. table of contents) and other features.
 #
 # To install, run these commands in terminal window.
