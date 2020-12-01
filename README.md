@@ -8,6 +8,7 @@ Videos of interacting humans are converted into time series data with [OpenPose]
 
 This repository provides Python code and annotated Jupyter notebooks to perform these actions.
 
+* Step 0: Getting started with this project. What to install (besides these files).
 * Step 1: Process a video (or videos) with OpenPose, creating a JSON file with wireframe data for all identified persons ('actors'). 
 * Step 2: Extract JSON data to numpy and perform basic validations (identifying individuals over time, tagging windows of interest, handle missing data).
 * Step 3: Calculated cross-correlations, Granger Causality (and other measures) between actors in dataset. 
@@ -20,6 +21,30 @@ To get this script working on a new system you need to do the following
 2. Install [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose)
 3. Next you need to download the trained neural-network models that OpenPose uses. To do this go to the `models` subdirectory of OpenPose directory, and double-click / run the `models.bat` script.
 3. Install OpenCV2 
+4. Launch jupyter, open the Step 0 notebook and follow the instructions in there.
+
+### Python dependencies
+
+The main requirements are found in `environment.yml` which can be used to create a new [(ana)conda](https://docs.conda.io/en/latest/) environment like so:
+
+```bash
+conda create -f environment.yml
+```
+
+### Requirements
+The main requirements are:
+
+  - numpy
+  - seaborn
+  - pandas
+  - glob2
+  - opencv
+  - pyarrow
+  - xlrd
+  - jupytext
+  - ipywidgets
+  - ipycanvas
+  - nodejs
 
 ### Todo: 
 A tutorial is providing using an example of mother infant interaction. 
