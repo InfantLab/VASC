@@ -239,6 +239,7 @@ def diffKeypoints(keypoints1,keypoints2,indices):
         keypoints1: 1st array of keypoints.
         keypoints2: 1st array of keypoints.
         indices: a set of indices to compare over.
+        aveage: do we avearge over kee
     Returns:
         diff per index (if any i)
     """
@@ -340,10 +341,12 @@ def deleteSeries(keypoints_array,v,c,pers,start,end):
     #TODO - update the corresponding json file.
     return keypoints_array
     
-def fixpeopleSeries(keypoints_array,v,c,people, start, end):
+    
+def OLDfixpeopleSeries(keypoints_array,v,c,people, start, end):
     """ openpose isn't consistent in labelling people (person 1 could be labeled pers 2 in next frame).
     So we go through frame by frame and label people in new frame with index of nearest person from previous frame. This *should* fix things.
-    I have horrible feeling it will get messed up by missing data. Let's find out..
+    Do do this we take difference in location of coordinates of person 1 in this frame with all people in next frame. Let's say this is Person 4. We swap person 4 and person 1 data in all subsequent frames effectively relabling them. Now do same for person two but only comparing to person 2 upwards in next frame. 
+    Nearest means the closest averaged over set of coordinates There will often be missing points in a frame so we ought to account for that. 
     Args:
         keypoints_array: all the data.
         v: which video? - specifies first dimension of array
@@ -357,23 +360,88 @@ def fixpeopleSeries(keypoints_array,v,c,people, start, end):
     #This may get messy!
     for f in range(start,end-1):
         print ("frame ", '{:4d}'.format(f))
-        # we loop through all pairs of people
-        for p1 in range(len(people)-1):
-            r1 = people[p1] #what row is this?
+        # we loop through all pairs of people 
+        #person p from frame f and people p, p + 1, p + 2 from frame f + 1
+        for p1 in range(len(people)-1): #first person from frame f
+            r1 = people[p1] #what person is this?
             whosleft = range(p1,len(people))
             delta = {}
-            for p2 in whosleft: 
-                r2 = people[p2] #what row is this?
+            for p2 in whosleft: #next person from frame f + 1
+                r2 = people[p2] #what person is this?
                 delta[p2] = diffKeypoints(keypoints_array[v,c,f,p1,:],keypoints_array[v,c,f+1,p2,:],xys)
-                print(p1,p2,np.nansum(delta[p2]),any(np.isfinite(delta[p2])))
-            #this next line finds the minimum & non-null value
-            key_min = min(np.nansum(delta.keys()), key=(lambda k: delta[k]))
+                print(p1,p2,np.nanmean(delta[p2]),any(np.isfinite(delta[p2])))
+            try:
+                 #this next line tries finds the minimum & non-null value
+                key_min = min(np.nanmean(delta.keys()), key=(lambda k: delta[k]))
+            except: 
+                #if that fails then default to same data series
+                key_min = p1
             print (key_min)
             if key_min != p1:
                 #swap the rest of series between these two 
                 keypoints_array = swapSeries(keypoints_array,v,c,p1,key_min,f+1,end)
+    return keypoints_array
 
-                
+def minimumswaps(deltas):
+    """For 2x2 np.array of distances we want to 'diagonalise the minimums'. That is to say we want
+    to find the smallest single entry and remove the row and column containing that then repeat the process. 
+    The use case is for when openpose mislabels skeletons from one frame to the next. We take a matrix of 
+    distances between the centroids and map each to its nearest from frame f to frame f+1 so we can swap them. 
+    So what i really need is set of swaps. And for N x N matrix we only need N-1 swaps.
+    Args:
+        deltas: A 2dimensional np.array of minimal differences between pairs of elements
+    Returns: 
+        a set of ordered pairs to swap.
+    """
+    (rs,cs) = deltas.shape
+    swaps = []
+    for c in range(cs-1):
+        #next finds finds minimal remaining value in the matrix, then finds it's row, col coordinates
+        rc  = np.unravel_index(np.argmin(deltas, axis=None), deltas.shape)
+        #now we set this row and col to infinity so we find next smallest remaining value
+        deltas[:,rc[1]] = np.inf
+        deltas[rc[0],:] = np.inf
+        swaps.append(rc)
+    return swaps    
+
+
+def fixpeopleSeries(keypoints_array,v,c,people, start, end):
+    """Openpose isn't consistent in labelling people (person 1 could be labeled pers 2 in next frame).
+    So we go through frame by frame and label people in new frame with index of nearest person from previous frame. This *should* fix things.
+    Do do this we take difference in location of coordinates of person 1 in this frame with all people in next frame. Let's say this is Person 4. We swap person 4 and person 1 data in all subsequent frames effectively relabling them. Now do same for person two but only comparing to person 2 upwards in next frame. 
+    Nearest means the closest averaged over set of coordinates There will often be missing points in a frame so we ought to account for that. 
+    Args:
+        keypoints_array: all the data.
+        v: which video? - specifies first dimension of array
+        c: which camera? - specifies first dimension of array
+        people: list of all people we are comparing. 
+        start: where in time series do we start? (TODO can be blank - start at beginning)
+        end: where in time series do we end? (TODO can be blank - to end)
+    Returns:
+        a rearranged keypoints_array
+    """
+    #This may get messy!
+    for f in range(start,end-1):
+        print ("frame ", '{:4d}'.format(f))
+        # we loop through all unique pairs of people to distances between
+        #person p from frame f and people p, p + 1, p + 2 from frame f + 1
+        #we store these in upper diagonal of delta matrix
+        deltas = np.array(np.full((len(people),len(people)),np.inf)) #all other values are infinite
+        for p1 in range(len(people)): #first person from frame f
+            for p2 in range(p1,len(people)): # whos left? next person from frame f + 1
+                delta = diffKeypoints(keypoints_array[v,c,f,p1,:],keypoints_array[v,c,f+1,p2,:],xys)
+                deltas[p1,p2] = np.nanmean(delta)
+        #ok, now we know the pairwise distances
+        #next we find the pairwise mimimums
+        swaplist = minimumswaps(deltas)
+        #finally we swap these time series from the next frame so each persons continues 
+        for swap in swaplist:
+            p1  = swap[0]
+            p2 = swap[1]
+            if p1 != p2:
+                #swap the rest of series between these two 
+                keypoints_array = swapSeries(keypoints_array,v,c,p1,p2,f+1,end)
+    return keypoints_array
                 
 def swapCameras(videos, keypoints_array,vidx,cam1,cam2):
     """helper function for swapping secondary camera angle to main camera.

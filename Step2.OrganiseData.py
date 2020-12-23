@@ -78,7 +78,8 @@ projectpath = os.getcwd() + "\\..\\SpeaknSign\\"
 # locations of videos and output
 videos_in = projectpath 
 videos_out   = projectpath + "out"
-#videos_out = "E:\\SpeakNSign\\out"
+#videos_out1 = video_out
+videos_out1 = "E:\\SpeakNSign\\out"
 videos_out_openpose   = videos_out + "\\openpose"
 videos_out_timeseries = videos_out + "\\timeseries"
 videos_out_analyses   = videos_out + "\\analyses"
@@ -110,6 +111,8 @@ keypoints_original = reloaded["keypoints_array"] #the unprocessed data
 #keypoints_array = np.copy(keypoints_original)  #an array where we clean the data.
 
 
+reloaded
+
 keypoints_array = keypoints_original  #an array where we clean the data.
 keypoints_array.shape
 
@@ -117,7 +120,7 @@ keypoints_array.shape
 #
 # We now have an numpy array called `keypoints_array` containing all the openpose numbers for all videos. Now we need to do some cleaning of the data. We provide set of tools to do this. There are several tasks we need to do.
 #
-# 1. Pick camera with best view of both participants - swap this to camera 1
+# 1. Pick camera with best view of both participants - swap this to camera 1 (Assu
 # 2. Tag the first and last frames of interest. 
 # 3. Tag the adult & infant in first frame of interest. So both individuals should be in first frame.
 # 4. Try to automatically tag then in subsequent frames.
@@ -169,7 +172,7 @@ for vid in videos:
 
 # ## CONTROL PANEL
 #
-# Run this block of code to provide controls to reorganise the data. 
+# Run this BIG block of code to provide controls to edit and reorganise the data. 
 # If anything goes wrong you can revert to the original data. 
 #
 # This needs ipywidgets and ipycanvas to be installed. (See Step 0).
@@ -190,8 +193,7 @@ pickvid = widgets.Dropdown(
     value= vidlist[0],
     description='Select subject:'
 )
-button_exclude =  widgets.Button(description='DELETE!')
-vidbox = widgets.HBox([pickvid, button_exclude])
+button_exclude =  widgets.Button(description='DELETE THIS ONE!')
 
 
 pickcam = widgets.Dropdown(
@@ -239,11 +241,12 @@ slider = widgets.IntSlider(
     readout_format='d'
 )
 
+
 button_update = widgets.Button(description="Redraw")
 button_fixseries = widgets.Button(description="Auto fix")
 button_reset_one = widgets.Button(description="Reset this video")
 button_reset_all = widgets.Button(description="Reset all")
-buttonbox = widgets.HBox([button_update,button_fixseries,button_reset_one,button_reset_all])
+buttonbox = widgets.HBox([button_update,button_fixseries,button_exclude,button_reset_one,button_reset_all])
 output = widgets.Output()
 
 def pickvid_change(change):
@@ -374,6 +377,7 @@ def drawMovementGraph(vid, cam, points, frame = 0, average = True):
     t = np.zeros([N,1])
     t[:,0]= list(range(N))
 
+    #variable to track the centre of gravity for each person
     ceegees = np.zeros([N,videos[vid][cam]["maxpeople"]])
 
     for frameNum in range(N):
@@ -387,7 +391,6 @@ def drawMovementGraph(vid, cam, points, frame = 0, average = True):
 
     plt.figure(figsize=(12, 4))
     plt.plot(t,ceegees)
-    logging.info("frame = " + str(frame))
     plt.axvline(x=frame,c='tab:cyan')
     plt.title('Horizontal movement of people (average) over time.)')
     plt.legend([0, 1, 2, 3])
@@ -399,7 +402,7 @@ def updateAll(forceUpdate = False):
         slider.value = 0
         slider.max = videos[pickvid.value][pickcam.value]["end"]
     with output:
-        display(canvas,vidbox,cambox, babybox,adultbox,removebox, slider, buttonbox)  
+        display(canvas,pickvid,cambox, babybox,adultbox,removebox, slider, buttonbox)  
         drawOneFrame(pickvid.value,pickcam.value,slider.value)
         drawMovementGraph(pickvid.value,pickcam.value,vasc.xs,slider.value,True)
 
@@ -411,10 +414,12 @@ output
 # ### Step 2.4: TODO - Correct for camera motion?
 #
 # Some video sets the camera is not fixed. Any camera movements will cause perfectly correlated movements in the pair of signals. We need to decide what (if anything) to do about this. (Not yet implemented.)
+#
+#
 
 # ### Step 2.5: TODO - Interpolate missing data
 #
-# There are still likely to be gaps. We need to decide what to do about those.  (Not yet implemented.) 
+# There are still likely to be gaps. We need to decide what to do about those.  At the moment interpolation is done by scipy in the Step 3 code.
 
 # ### Step 2.6: TODO - Exclude whole video
 #
@@ -442,7 +447,7 @@ np.savez_compressed(videos_out_timeseries + '\\cleandata.npz', keypoints_array=k
 
 # ## Step 2.8: Save a pandas dataframe version too.
 #
-# Most of our analysis will be done with SyncPy which uses pandas dataframes as its main data format. So let's build a multiindex dataframe containing just the data we need. 
+# Most of our analysis will be done with SciPy which uses pandas dataframes as its main data format. So let's build a multiindex dataframe containing just the data we need. 
 #
 # The rows will have three levels of hierarchy (video x person x BODY25-coordinate). The rows are the individual frames. So a single column will contain the complete time-series of a single dimension of a single point of one person.  So in this example: 
 # ```
