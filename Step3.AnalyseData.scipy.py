@@ -22,7 +22,7 @@
 #
 # This script correlates and compares the timeseries of wireframes for the two figures in the video `["parent", "infant"]`
 #
-# We start by reloading the saved parquet file containing the numpy array of all [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) data from all pairs of individuals. 
+# We start by reloading the saved parquet file containing the multi-index numpy array of all [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) data from all pairs of individuals. 
 #
 #
 
@@ -34,7 +34,6 @@ import math
 import numpy as np       
 import pandas as pd
 import pyarrow.parquet as pq
-
 import matplotlib.pyplot as plt
 # %matplotlib inline
 
@@ -101,9 +100,9 @@ df = df.truncate(before  = first, after = last)
 
 df = df.interpolate()
 
-df.shape
-
+#take a quick look
 print(df.head())
+df.shape
 
 # ### 3.2.1 Mean movements
 # We create a dictionary of the subsets of OpenPose coordinates we want to average and then call `mean` on the Pandas dataframe. e.g.
@@ -141,12 +140,19 @@ print(df.head())
 
 # +
 meanpoints = {"head" : vasc.headxys,
+              "headx": vasc.headx,
+              "heady": vasc.heady,
               "arms" : vasc.armsxys,
-              "all"  : vasc.xys}
+              "armsx": vasc.armsx,
+              "armsy": vasc.armsy,
+              "all"  : vasc.xys,
+              "allx" : vasc.xs,
+              "ally" : vasc.ys}
 
 vids = "All"
 people = ["infant","parent"]
 
+#average across the points in each group (all points of head etc. )
 avgdf = vasc.averageCoordinateTimeSeries(df,meanpoints,vids,people)
 # -
 
@@ -154,29 +160,29 @@ avgdf.head
 
 # ### 3.2.2 Rolling window of movements
 #
-# One thing we'd like to know is if mothers move in response to infants. The raw time series are probably too noisy to tell us this so instead we look at the variance of movement over a short rolling window. 
+# One thing we'd like to know is if mothers move in response to infants. The raw time series are probably too noisy to tell us this so instead we can look at few alternatives
 #
-# First we apply 2 second long (50 frame) rolling window to each coordinate of the body and use the stddev or variance function `std()` or `var()` . Then we take averages as in the step above. 
+# 1. **Smoothed** - if we average the signal over a short rolling window we smooth out any high-frequency jitter. 
+# 2. **Variance** - the variance of movement over a short rolling window. First we apply 2 second long (50 frame) rolling window to each coordinate of the body and use the stddev or variance function `std()` or `var()` . Then we take averages as in the step above. However, this time we combine x and y coordinates as this is now a movement index.
 #
-# However, this time we combine x and y coordinates as this is now a movement index.
+#
+#
 
 # +
-win = 50
+win = 50 #2 seconds
+halfwin = math.floor(win/2)
 
-movedf = df.rolling(window = win, min_periods = math.floor(win/2)).var()
-# cut out the empty bits at the start
-movedf = movedf.truncate(before  = first + 50, after = last)
+smoothdf = df.rolling(window = 5).mean()
+smoothdf = smoothdf.truncate(before  = first, after = last)
 
-vids = "All"
-people = ["infant","parent"]
-meanpoints = {"head" : vasc.headxys,
-              "arms" : vasc.armsxys,
-              "all"  : vasc.xys}
-
-movedf = vasc.averageCoordinateTimeSeries(movedf,meanpoints,vids,people)
+vardf = df.rolling(window = win, min_periods = halfwin).var()
+vardf = vardf.truncate(before  = first + 50, after = last) # cut out the empty bits at the start
+ 
+smoothdf = vasc.averageCoordinateTimeSeries(smoothdf,meanpoints,vids,people)
+vardf = vasc.averageCoordinateTimeSeries(vardf,meanpoints,vids,people)
 # -
 
-movedf.head
+vardf.head
 
 # Let's create a widget to plot some graphs of the data
 
@@ -201,7 +207,7 @@ pickfeature = widgets.Dropdown(
     description='Feature:'
 )
 
-linetypes = ["Mean point", "Moving Average"]
+linetypes = ["Mean point", "Smoothed Mean (5 frames)","Variance over 2 secs"]
 picktype = widgets.Dropdown(
     options= linetypes,
     value= linetypes[0],
@@ -240,12 +246,14 @@ def drawGraphs(vid, feature, linetype):
 
     if linetype == linetypes[0]:
         usedf = avgdf
+    elif linetype == linetypes[1]:
+        usedf = smoothdf
     else:
-        usedf = movedf
+        usedf = vardf
         
     #to select a single column..
-    infant = usedf[(vid, who[0], feature)].to_frame()
-    parent = usedf[(vid, who[1], feature)].to_frame()
+    infant = usedf[(vid, people[0], feature)].to_frame()
+    parent = usedf[(vid, people[1], feature)].to_frame()
     n  = np.arange(usedf.shape[0])
     
     #selecting multiple columns slightly messier
@@ -260,7 +268,7 @@ def drawGraphs(vid, feature, linetype):
 def updateAll(forceUpdate = False):
     output.clear_output(wait = True)
     if forceUpdate:
-        logging.info('forceUpdate')
+        logging.debug('forceUpdate')
         #slider.value = 0
         #slider.max = videos[pickvid.value][pickcam.value]["end"]
     with output:
@@ -278,12 +286,12 @@ output
 #
 # First we run some simple correlations between the mother and infant.
 
-infant = movedf[(vid, who[0], 'head')].to_frame()
+infant = vardf[(vid, people[0], 'head')].to_frame()
 infant.head
 print(type(infant))
 
 vid = "SS003"
-movedf[(vid, who[0], 'head')].corr(movedf[(vid, who[1], 'head')]) 
+vardf[(vid, people[0], 'head')].corr(vardf[(vid, people[1], 'head')]) 
 
 who = ["infant","parent"]
 parts = ["head","arms","all"]
@@ -295,7 +303,7 @@ for vid in videos:
     thisrow = []
     for part in parts:
         #to select a single column..
-        pearson = movedf[(vid, who[0], part)].corr(movedf[(vid, who[1], part)])
+        pearson = vardf[(vid, people[0], part)].corr(vardf[(vid, people[1], part)])
  
         thisrow.append(pearson) #this is for correlation
         thisrow.append(None) #this is for maximum lag
@@ -305,9 +313,25 @@ for vid in videos:
 
 results
 
+# ## 3.4 Comparing to human coding. 
+#
+# We have a spreadsheet of syhnchrony scores for each parent infant dyad. Here we see if we can find a measure that correlates with the human scores.
+#
+# First, load up the spreadsheet..
+
+# +
 excelpath = projectpath + "\\SS_CARE.xlsx"
-videolist = pd.read_excel(excelpath)
+
+filename, file_format = os.path.splitext(excelpath)
+if file_format and file_format == 'xls':
+    # use default reader 
+    videolist = pd.read_excel(excelpath)
+else: 
+    #since dec 2020 read_excel no longer supports xlsx (!?) so need to use openpyxl like so..
+    videolist = pd.read_excel(excelpath, engine = "openpyxl")
+    
 videolist = videolist.set_index("subject")
+# -
 
 
 videolist

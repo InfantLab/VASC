@@ -50,9 +50,11 @@
 #
 # There are a handful of python libraries that we use for things like image manipulation, file operations, maths and stats. Many are probably already installed by default such as `os, math, numpy, pandas, matplotlib`. Others need adding to our python environment. 
 #
+# PyArrow is a useful extension for saving Pandas and NumPy data. We need it to move the large array created in Step 2 to Step 3. 
+#
 # **If you are using conda then run the following command to install all the main libraries.**
 # ```
-# conda install glob2 opencv pyarrow xlrd
+# conda install glob2 opencv pyarrow xlrd openpyxl
 # ```
 # #### Troubleshooting
 # If when you run the code in Steps 1, 2 & 3 you might see an error like `ModuleNotFoundError: No module named 'glob'` this is because that python module needs to be installed on your computer. If you use Anaconda, the missing module can usually be installed with the command `conda install glob`.
@@ -80,14 +82,14 @@
 
 # ### 0.4 - JupyText 
 #
-# The standard ipython notebook format (`mynotebook.ipynb`) is a single file that mixes together code, formatting commands and outputs both as the results of running code and embedded binaries (images, graphs). This makes it non-human readable and very hard to tell what changes from one improvement to the next. `Jupytext` solves this by creating a synchronised plain text version of the file saved as a plain `.py` file (`mynotebook.py`). These are useful for developers but can mostly be ignored by users. 
+# The standard ipython notebook format (`mynotebook.ipynb`) is a single file that mixes together code, formatting commands and outputs both as the results of running code and embedded binaries (images, graphs). This makes it non-human readable and very hard to tell what changes from one improvement to the next. `Jupytext` solves this by creating a synchronised plain text version of the file saved as a plain `.py` file (`mynotebook.py`). These are useful for developers (as it helps you track differences between versions more easily) but can mostly be ignored by users. 
 #
 #
 # Install JupyText by running
 #
 # ```conda install -c conda-forge jupytext```
 
-# ### 0.5 Notebook extensions (optional)
+# ### 0.6 Notebook extensions (optional)
 # Installing Jupyter notebook extenstions provide some useful tools for navigating notebooks (e.g. table of contents) and other features.
 #
 # To install, run these commands in terminal window.
@@ -102,6 +104,6 @@
 
 # ### 0.6 - Using Jupyter with network drives
 #
-# By default Jupyter launched from Anaconda Navigator will open it in your home directory. It then might not be possible to access files on a network drive you need to first launch a command window for the correct Jupyter environment. Then use command to launch Jupyter itself. 
+# By default Jupyter launched from Anaconda Navigator will open it in your home directory. It then might not be possible to access files on a network drive you need. To get around this first launch a command window for the correct Jupyter environment. Then use this command to launch Jupyter itself (assuming you want to access the U:/ drive). 
 #
 # ```jupyter lab --notebook-dir U:/```

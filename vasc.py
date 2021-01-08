@@ -185,6 +185,28 @@ def averagePoint(keypointList,indices):
     else:
         return 0  # or None?
 
+def varKeypoint(keypointList,indices):
+    """Function to find the variance for this set of points for this person.
+    It will take the average of the non-zero keypoints
+    Args:
+        keypointList: 1d array of keypoints.
+        indices: a set of indices to average over.
+    Returns:
+        variance relative to average of set
+    """
+    av = averagePoint(keypointList,indices)
+    tot = 0
+    N = 0
+    for i in indices:
+        if keypointList[i]>0:
+            tot += (keypointList[i] - av)**2
+            N += 1
+    if N > 0:
+        return tot / N
+    else:
+        return np.inf  # or None?
+
+    
 def averageCoordinateTimeSeries(df,indices,videos = "All", people = "Both"):
     """Function to find the average of a set of coordinates from the person location time series.
     This helps track their centre of mass or the movements of the head, etc. 
@@ -341,46 +363,7 @@ def deleteSeries(keypoints_array,v,c,pers,start,end):
     #TODO - update the corresponding json file.
     return keypoints_array
     
-    
-def OLDfixpeopleSeries(keypoints_array,v,c,people, start, end):
-    """ openpose isn't consistent in labelling people (person 1 could be labeled pers 2 in next frame).
-    So we go through frame by frame and label people in new frame with index of nearest person from previous frame. This *should* fix things.
-    Do do this we take difference in location of coordinates of person 1 in this frame with all people in next frame. Let's say this is Person 4. We swap person 4 and person 1 data in all subsequent frames effectively relabling them. Now do same for person two but only comparing to person 2 upwards in next frame. 
-    Nearest means the closest averaged over set of coordinates There will often be missing points in a frame so we ought to account for that. 
-    Args:
-        keypoints_array: all the data.
-        v: which video? - specifies first dimension of array
-        c: which camera? - specifies first dimension of array
-        people: list of all people we are comparing. 
-        start: where in time series do we start? (TODO can be blank - start at beginning)
-        end: where in time series do we end? (TODO can be blank - to end)
-    Returns:
-        a rearranged keypoints_array
-    """
-    #This may get messy!
-    for f in range(start,end-1):
-        print ("frame ", '{:4d}'.format(f))
-        # we loop through all pairs of people 
-        #person p from frame f and people p, p + 1, p + 2 from frame f + 1
-        for p1 in range(len(people)-1): #first person from frame f
-            r1 = people[p1] #what person is this?
-            whosleft = range(p1,len(people))
-            delta = {}
-            for p2 in whosleft: #next person from frame f + 1
-                r2 = people[p2] #what person is this?
-                delta[p2] = diffKeypoints(keypoints_array[v,c,f,p1,:],keypoints_array[v,c,f+1,p2,:],xys)
-                print(p1,p2,np.nanmean(delta[p2]),any(np.isfinite(delta[p2])))
-            try:
-                 #this next line tries finds the minimum & non-null value
-                key_min = min(np.nanmean(delta.keys()), key=(lambda k: delta[k]))
-            except: 
-                #if that fails then default to same data series
-                key_min = p1
-            print (key_min)
-            if key_min != p1:
-                #swap the rest of series between these two 
-                keypoints_array = swapSeries(keypoints_array,v,c,p1,key_min,f+1,end)
-    return keypoints_array
+
 
 def minimumswaps(deltas):
     """For 2x2 np.array of distances we want to 'diagonalise the minimums'. That is to say we want
@@ -404,6 +387,48 @@ def minimumswaps(deltas):
         swaps.append(rc)
     return swaps    
 
+def sortpeoplebySize(keypoints_array,v,c,maxpeople, start, end):
+    """Openpose isn't consistent in labelling people (person 1 could be labeled pers 2 in next frame).
+    However, in many cases the videos are expected to contain an adult and a young child so sorting by size is a sensible thing to try.
+    To keep them in the same series we label them so that person with the lowest spread of wireframe nodes has the lowest index.
+    Do do this we take variance from Centre of Gravity for each person in the frame and then label them in. 
+    Nearest means the closest averaged over set of coordinates There will often be missing points in a frame so we ought to account for that. 
+    Args:
+        keypoints_array: all the data.
+        v: which video? - specifies first dimension of array
+        c: which camera? - specifies first dimension of array
+        people: list of all people we are comparing. 
+        start: where in time series do we start? (TODO can be blank - start at beginning)
+        end: where in time series do we end? (TODO can be blank - to end)
+    Returns:
+        a rearranged keypoints_array
+    """
+    for f in range(start,end):
+        #print ("frame ", '{:4d}'.format(f))
+        # we loop through people and find variance of all their nodes from the average
+        for p1 in range(maxpeople): #first person from frame f
+            vs = {} #dictionary for vars
+            personkeypoints = keypoints_array[v,c,f,p1,:]
+            varx = varKeypoint(personkeypoints,xs) 
+            vary = varKeypoint(personkeypoints,ys) 
+            vs[p1] = 0.5 *(varx + vary)
+            
+        #now we know the vars for each index lets sort them
+        #sort by index 
+        vs = dict(sorted(vs.items(), key=lambda item: item[0]))
+        while len(vs) > 1: #while there more than one we may still need to swap something
+            minkey = min(vs.keys())        #smallest index
+            minvarkey = min(vs,key=vs.get) #smallest value
+            # if minkey == minvarkey do nothing as smallest index already has smallest value
+            if minkey != minvarkey:        
+                #swap these sets of data around
+                #print("swap", minkey, minvarkey)
+                #first swap the rest of series between these two 
+                keypoints_array = swapSeries(keypoints_array,v,c,minkey,minvarkey,f,end)
+                #now swap the keys 
+                vs[minvarkey] = vs[minkey]
+            vs.pop(minkey)  #remove the smallest one and loop again
+    return keypoints_array
 
 def fixpeopleSeries(keypoints_array,v,c,people, start, end):
     """Openpose isn't consistent in labelling people (person 1 could be labeled pers 2 in next frame).
@@ -422,7 +447,7 @@ def fixpeopleSeries(keypoints_array,v,c,people, start, end):
     """
     #This may get messy!
     for f in range(start,end-1):
-        print ("frame ", '{:4d}'.format(f))
+        #print ("frame ", '{:4d}'.format(f))
         # we loop through all unique pairs of people to distances between
         #person p from frame f and people p, p + 1, p + 2 from frame f + 1
         #we store these in upper diagonal of delta matrix
