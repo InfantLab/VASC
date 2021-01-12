@@ -111,9 +111,9 @@ keypoints_original = reloaded["keypoints_array"] #the unprocessed data
 #keypoints_array = np.copy(keypoints_original)  #an array where we clean the data.
 
 
-reloaded
-
 keypoints_array = keypoints_original  #an array where we clean the data.
+
+#check the shape
 keypoints_array.shape
 
 # ## Step 2.3 Clean the data
@@ -180,11 +180,21 @@ for vid in videos:
 # Run this BIG block of code to provide controls to edit and reorganise the data. 
 # If anything goes wrong you can revert to the original data. 
 #
-# This needs ipywidgets and ipycanvas to be installed. (See Step 0).
+# This needs `ipywidgets` and `ipycanvas` to be installed. (See [Step 0](Step0.GettingStarted.ipynb))
 
 # +
+###############################################################
+# All the code in this block draws our data editing control panel
+###############################################################
+
+###############################################################
+## a canvas object to show current frame of the video.
 canvas = Canvas(width=800, height=600)
 
+###############################################################
+## dropbown lists to select the video and the camera (if multiple angles)
+## next to the video dropdown we have Delete button to remove that vid
+## next to the camera dropdown we have a swap button to choose a primary camera.
 vidlist = [] #used to fill dropdown options
 camlist = [] #used to fill dropdown options
 for vid in videos:  
@@ -200,7 +210,6 @@ pickvid = widgets.Dropdown(
 )
 button_exclude =  widgets.Button(description='DELETE THIS ONE!')
 
-
 pickcam = widgets.Dropdown(
     options= camlist,
     value= camlist[0],
@@ -209,14 +218,20 @@ pickcam = widgets.Dropdown(
 button_swapcam = widgets.Button(description="Swap this to camera1")
 cambox = widgets.HBox([pickcam, button_swapcam])
 
-#pressing this button swaps one set of data to be index 0 - default for child.
-button_swapchild = widgets.Button(description="Swap to child (0)")
+###############################################################
+## Who is who? 
+## In processed video we want child in index 0 and adult in index 1.
+## so need ability to swap series and delete unwanted data.
+## pressing button_swapchild swaps selected set of data to be index 0 - default for child.
+
+button_swapchild = widgets.Button(description="Swap to child (0)") 
 child = widgets.Dropdown(
     options = list(range(10)),
     value= 0,
     description='Set: '
 )
 babybox = widgets.HBox([button_swapchild, child])
+
 adult = widgets.Dropdown(
     options = list(range(10)),
     value= 1,
@@ -234,6 +249,10 @@ remove = widgets.Dropdown(
 removebox = widgets.HBox([button_remove,remove])
 
 
+###############################################################
+## What frame is displayed in the canvas?
+## all swap and delete operation work on data AFTER this frame.
+## include a few buttons to adjust the frame forward or backwards slightly
 slider = widgets.IntSlider(
     value=0,
     min=0,
@@ -243,7 +262,8 @@ slider = widgets.IntSlider(
     continuous_update=False,
     orientation='horizontal',
     readout=True,
-    readout_format='d'
+    readout_format='d',
+    layout=widgets.Layout(width='800px')
 )
 
 #buttons to adjust the slider in small increments 
@@ -256,8 +276,6 @@ plus1pct = widgets.Button(description="+1%")
 
 def minus1pct_clicked(output):
     slider.value = max(0,slider.value - 0.01 * slider.max)
-def plus1pct_clicked(output):
-    slider.value = min(slider.max,slider.value + 0.01 * slider.max)
 def minus10_clicked(output):
     slider.value = max(0,slider.value - 10)
 def minus1_clicked(output):
@@ -265,7 +283,9 @@ def minus1_clicked(output):
 def plus1_clicked(output):
     slider.value = min(slider.max,slider.value + 1)
 def plus10_clicked(output):
-    slider.value = min(slider.max,slider.value - 10)
+    slider.value = min(slider.max,slider.value + 10)
+def plus1pct_clicked(output):
+    slider.value = min(slider.max,slider.value + 0.01 * slider.max)
                        
 minus1pct.on_click(minus1pct_clicked)
 minus10.on_click(minus10_clicked)
@@ -274,7 +294,12 @@ plus1.on_click(plus1_clicked)
 plus10.on_click(plus10_clicked)
 plus1pct.on_click(plus1pct_clicked)
 
-sliderbox  = widgets.HBox([slider,minus1pct,minus10,minus1,plus1,plus10,plus1pct])
+adjustbox  = widgets.HBox([minus1pct,minus10,minus1,plus1,plus10,plus1pct])
+
+
+###############################################################
+## Action buttons
+## To redraw everything it's current state, to attempt autofixing or to undo some or all our changes
 
 button_update = widgets.Button(description="Redraw")
 button_fixlocations = widgets.Button(description="Fix by location",tooltip="match each person to nearest person in next frame")
@@ -283,6 +308,11 @@ button_reset_one = widgets.Button(description="Reset this video")
 button_reset_all = widgets.Button(description="Reset all")
 buttonbox = widgets.HBox([button_update,button_fixlocations,button_fixsizes,button_exclude,button_reset_one,button_reset_all])
 output = widgets.Output()
+
+
+###############################################################
+## Widget 'Event' codes
+## watches each widget waiting for something to change and then executes these bits of code. 
 
 def pickvid_change(change):
     if change['name'] == 'value' and (change['new'] != change['old']):
@@ -311,7 +341,8 @@ def on_fixlocations(output):
     v = videos[pickvid.value][pickcam.value]["v"]
     c = videos[pickvid.value][pickcam.value]["c"]
     end  = videos[pickvid.value][pickcam.value]["end"]
-    vasc.fixpeopleSeries(keypoints_array,v,c,[0,1],slider.value, end)
+    window = 10
+    vasc.fixpeopleSeries(keypoints_array,v,c,[0,1],slider.value, end, window)
     updateAll(True)
     
 def on_fixsizes(output):
@@ -395,7 +426,8 @@ button_remove.on_click(on_deleteseries)
 button_update.on_click(on_button_clicked)
 button_reset_all.on_click(on_reset_all)
 
-##functions to draw complicated stuff..
+###############################################################
+## ## functions to draw complicated stuff..
 def drawOneFrame(vid, cam, frameNum):
     # which subarray of data do we need?
     v = videos[vid][cam]["v"]
@@ -442,13 +474,15 @@ def drawMovementGraph(vid, cam, points, frame = 0, average = True):
     plt.legend([0, 1, 2, 3])
     plt.show()
 
+###############################################################
+## Handy update routine to run each time something has changed
 def updateAll(forceUpdate = False):
     output.clear_output(wait = True)
     if forceUpdate:
         slider.value = 0
         slider.max = videos[pickvid.value][pickcam.value]["end"]
     with output:
-        display(canvas,pickvid,cambox, babybox,adultbox,removebox, sliderbox, buttonbox)  
+        display(canvas,pickvid,cambox, babybox,adultbox,removebox, buttonbox, slider, adjustbox)  
         drawOneFrame(pickvid.value,pickcam.value,slider.value)
         drawMovementGraph(pickvid.value,pickcam.value,vasc.xs,slider.value,True)
 
@@ -469,11 +503,11 @@ output
 #
 # #### Step 2.5.1. TODO - autofix to cope with missing data
 #
-# Missing data currently confuses autofix and on it's own interpolation won't help here. Because you can't interpolate until you know who is who. one approach  might be to get autofix to use a moving average. 
+# Missing data currently confuses autofix and on it's own interpolation won't help here. Because you can't interpolate until you know who is who. Our current approach is to let autofix by location use a moving average of several previous frames. 
 
-# ### Step 2.6: TODO - Exclude whole video
+# ### Step 2.6: TODO - Save your game
 #
-# Some time the data will look too bad to use. In which case, we need to completely remove this whole set. (Not yet implemented.) 
+# Ought to be able to save the array when you half way through cleaning it. So you don't lose progress can come back another time. 
 
 keypoints_array.shape
 
@@ -496,8 +530,8 @@ with open(videos_out + '\\clean.json', 'w') as outfile:
 # in the time series folder we save the data file. 
 #in a compressed format as it has a lot of empty values
 np.savez_compressed(videos_out_timeseries + '\\cleandata.npz', keypoints_array=keypoints_array)
-# -
 
+# + [markdown] jupyter={"source_hidden": true}
 # ## Step 2.8: Save a pandas dataframe version too.
 #
 # Most of our analysis will be done with SciPy which uses pandas dataframes as its main data format. So let's build a multiindex dataframe containing just the data we need. 
@@ -513,6 +547,7 @@ np.savez_compressed(videos_out_timeseries + '\\cleandata.npz', keypoints_array=k
 #
 # <img src="multiindexdataframe.png" alt="multiindex" width="871"/>
 #
+# -
 
 #optional
 #can reload the clean values without recomputing steps above
@@ -532,33 +567,7 @@ shp = keypoints_array.shape
 keypoints_array.shape
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Another save point - this array is much smaller so will load / dave quicker.
+# Another save point - this array is much smaller so will load / Save quicker.
 
 np.savez_compressed(videos_out_timeseries + '\\trimdata.npz', keypoints_array=keypoints_array)
 
@@ -566,14 +575,6 @@ np.savez_compressed(videos_out_timeseries + '\\trimdata.npz', keypoints_array=ke
 trimmed = np.load(videos_out_timeseries + '\\trimdata.npz')
 keypoints_array = trimmed["keypoints_array"] #the unprocessed data
 keypoints_array.shape
-
-
-
-
-
-
-
-
 
 
 # Now we reorganise the data in a multiindex pandas array and save using `pyarrow`. 
@@ -607,8 +608,6 @@ for vid in videos:
         part = participants[p]
         for r in range(3*vasc.nPoints):
             cleandf[(vid, part, r)] = keypoints_array[v,0,:,p,r]
-
-
 
 #Sort the columns into alphabetical order (helps with step 3 calculations.)
 cleandf = cleandf.sort_index(axis = 1)

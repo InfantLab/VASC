@@ -430,18 +430,20 @@ def sortpeoplebySize(keypoints_array,v,c,maxpeople, start, end):
             vs.pop(minkey)  #remove the smallest one and loop again
     return keypoints_array
 
-def fixpeopleSeries(keypoints_array,v,c,people, start, end):
+def fixpeopleSeries(keypoints_array,v,c,people, start, end, window = 1):
     """Openpose isn't consistent in labelling people (person 1 could be labeled pers 2 in next frame).
     So we go through frame by frame and label people in new frame with index of nearest person from previous frame. This *should* fix things.
     Do do this we take difference in location of coordinates of person 1 in this frame with all people in next frame. Let's say this is Person 4. We swap person 4 and person 1 data in all subsequent frames effectively relabling them. Now do same for person two but only comparing to person 2 upwards in next frame. 
-    Nearest means the closest averaged over set of coordinates There will often be missing points in a frame so we ought to account for that. 
+    Nearest means the closest averaged over set of coordinates. There will often be missing points in a frame so we ought to account for that. 
+    If we use a window > 1 then we add up the differences with several previous frames. 
     Args:
-        keypoints_array: all the data.
-        v: which video? - specifies first dimension of array
-        c: which camera? - specifies first dimension of array
-        people: list of all people we are comparing. 
+        keypoints_array: array of all the data.
+        v: integer, which video? - specifies first dimension of array
+        c: integer, which camera? - specifies second dimension of array
+        people: list of indices of people we are comparing. 
         start: where in time series do we start? (TODO can be blank - start at beginning)
         end: where in time series do we end? (TODO can be blank - to end)
+        window: optional integer, if > 1 we use a rolling window including frame f -1, f-2, etc. 
     Returns:
         a rearranged keypoints_array
     """
@@ -454,8 +456,19 @@ def fixpeopleSeries(keypoints_array,v,c,people, start, end):
         deltas = np.array(np.full((len(people),len(people)),np.inf)) #all other values are infinite
         for p1 in range(len(people)): #first person from frame f
             for p2 in range(p1,len(people)): # whos left? next person from frame f + 1
-                delta = diffKeypoints(keypoints_array[v,c,f,p1,:],keypoints_array[v,c,f+1,p2,:],xys)
-                deltas[p1,p2] = np.nanmean(delta)
+                runningdelta  = 0
+                N = 0
+                for w in range(window): #step back several steps
+                    if f-w >= 0:  # if we are not going back before start of the array then this can
+                        delta = diffKeypoints(keypoints_array[v,c,f-w,p1,:],keypoints_array[v,c,f+1,p2,:],xys)
+                        meandelta = np.nanmean(delta)
+                        if not np.isnan(meandelta): #careful not to let nan's propogate
+                            N += 1
+                            runningdelta += meandelta
+                if N > 0:
+                    deltas[p1,p2] = runningdelta/N
+                else:
+                    deltas[p1,p2] = np.inf
         #ok, now we know the pairwise distances
         #next we find the pairwise mimimums
         swaplist = minimumswaps(deltas)
