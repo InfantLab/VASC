@@ -18,7 +18,7 @@
 # ### Caspar Addyman, 2020
 # ### https://github.com/infantlab/VASC
 #
-# # Step 3: Analyse the data using statsmodels
+# # Step 3: Analyse the data using scipy statsmodels
 #
 # This script correlates and compares the timeseries of wireframes for the two figures in the video `["parent", "infant"]`
 #
@@ -182,8 +182,6 @@ smoothdf = vasc.averageCoordinateTimeSeries(smoothdf,meanpoints,vids,people)
 vardf = vasc.averageCoordinateTimeSeries(vardf,meanpoints,vids,people)
 # -
 
-vardf.head
-
 # Let's create a widget to plot some graphs of the data
 
 # +
@@ -236,11 +234,11 @@ output = widgets.Output()
 def drawGraphs(vid, feature, linetype):
     """Plot input signals"""
     plt.ion()
-    f, axarr = plt.subplots(2, sharex=True)
-    axarr[0].set_title('Infant')
-    axarr[1].set_title('Parent')
-    #axarr[0].set_xlabel('Frames')
-    axarr[1].set_xlabel('Frames')
+
+    f,ax=plt.subplots(4,1,figsize=(14,10),sharex=True)
+    ax[0].set_title('Infant')
+    ax[1].set_title('Parent')
+    ax[1].set_xlabel('Frames')
 
     who = ["infant","parent"]
 
@@ -260,8 +258,20 @@ def drawGraphs(vid, feature, linetype):
     #infant = df3.loc[50:,(vid, part[0], ('head','arms', 'all'))]
     #parent = df3.loc[50:,(vid, part[1], ('head','arms', 'all'))]
 
-    axarr[0].plot(n,infant)
-    axarr[1].plot(n,parent, color='b')
+    ax[0].plot(n,infant)
+    ax[1].plot(n,parent, color='b')
+    
+    #calculate the correlations in a shorter rolling window
+    r_window_size = 120
+    rolling_r = usedf[(vid, who[0], feature)].rolling(window=r_window_size, center=True).corr(vardf[(vid, who[1], feature)])
+
+
+    usedf.loc[:,(vid, slice(None), feature)].plot(ax=ax[2])
+    ax[2].set(xlabel='Frame',ylabel='Movement index for parent and infant')
+
+    rolling_r.plot(ax=ax[3])
+    ax[3].set(xlabel='Frame',ylabel='Pearson r')
+    ax[3].set_title("Local correlation with rolling window size " + str(r_window_size))
 
     plt.show() 
 
@@ -279,9 +289,6 @@ def updateAll(forceUpdate = False):
 updateAll(True)
 output
 # -
-
-
-
 # ### 3.3 Movement analysis
 #
 # First we run some simple correlations between the mother and infant.
@@ -311,6 +318,7 @@ for vid in videos:
     thisrow.append(None) #don't have DyadSynScore yet 
     results.loc[vid] = thisrow
 
+#take a quick look
 results
 
 # ## 3.4 Comparing to human coding. 
@@ -334,64 +342,38 @@ videolist = videolist.set_index("subject")
 # -
 
 
+#take a quick look
 videolist
 
-# +
-
+# #copy the dyad syncrhony and maternal sensitivity scores into our data frame.
 results["DyadSynScore"] = videolist["DyadSyn"]
 results["MatSensScore"] = videolist["MatSens"]
-# -
 
+#take a quick look
 results
 
-# +
-vid = "SS095"
-# Set window size to compute moving window synchrony.
-r_window_size = 120
-# Compute rolling window synchrony
+#scatter plots of these results. 
+plt.scatter(results["DyadSynScore"],results["corrArms"], )
+plt.title("Correlation between expert rated synchrony and time series correlations")
+plt.xlabel("Dyad Synchroncy Score")
+plt.ylabel("Dyad Correlation")
+plt.show()
 
-#pearson = df3[(vid, who[0], part)].corr(df3[(vid, who[1], part)])
-rolling_r = df3[(vid, who[0], parts[0])].rolling(window=500, center=True).corr(df3[(vid, who[1], parts[1])])
-
-f,ax=plt.subplots(2,1,figsize=(14,6),sharex=True)
-df3.loc[:,(vid, slice(None), parts[0])].plot(ax=ax[0])
-ax[0].set(xlabel='Frame',ylabel='Movement index for parent and infant')
-rolling_r.plot(ax=ax[1])
-ax[1].set(xlabel='Frame',ylabel='Pearson r')
-plt.suptitle("Movement rolling window correlation")
-# -
+#
 
 rolling_r.mean()
 
+# So 
 
 # +
-def crosscorr(datax, datay, lag=0, wrap=False):
-    """ Lag-N cross correlation. 
-    Shifted data filled with NaNs 
-    
-    Parameters
-    ----------
-    lag : int, default 0
-    datax, datay : pandas.Series objects of equal length
 
-    Returns
-    ----------
-    crosscorr : float
-    """
-    if wrap:
-        shiftedy = datay.shift(lag)
-        shiftedy.iloc[:lag] = datay.iloc[-lag:].values
-        return datax.corr(shiftedy)
-    else: 
-        return datax.corr(datay.shift(lag))
 
-vid = "SS095"
-d1 = df3[(vid, who[0], parts[0])]
-d2 = df3[(vid, who[1], parts[0])]
+d1 = vardf[(vid, who[0], parts[0])]
+d2 = vardf[(vid, who[1], parts[0])]
 seconds = 5
 fps = 25
 wholeads = who[0] + 'leads <> ' + who[1] + ' leads'
-rs = [crosscorr(d1,d2, lag) for lag in range(-int(seconds*fps-1),int(seconds*fps))]
+rs = [vasc.crosscorr(d1,d2, lag) for lag in range(-int(seconds*fps-1),int(seconds*fps))]
 offset = np.ceil(len(rs)/2)-np.argmax(rs)
 f,ax=plt.subplots(figsize=(14,3))
 ax.plot(rs)
@@ -415,3 +397,8 @@ https://www.machinelearningplus.com/time-series/time-series-analysis-python/
     
 https://towardsdatascience.com/four-ways-to-quantify-synchrony-between-time-series-data-b99136c4a9c9
     
+# -
+
+
+
+

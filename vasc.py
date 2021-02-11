@@ -519,3 +519,26 @@ def swapCameras(videos, keypoints_array,vidx,cam1,cam2):
     videos[vidx][cam2]["c"] = c2
     
     return videos, keypoints_array
+
+def crosscorr(data1, data2, lag=0, wrap=False):
+    """ Lag-N cross correlation. 
+    Take two time series data1 and data2 then shift series 2 by a lag (+ve or -ve)
+    and then see what correlation between the two is. 
+    Either wrap data around to fill gap or shifted data filled with NaNs 
+ 
+    Parameters
+    ----------
+    lag : int, default 0
+    data1, data2 : pandas.Series objects of equal length
+    wrap: bool, default False  wrap data around - useful in some situations but not for us
+
+    Returns
+    ----------
+    crosscorr : float
+    """
+    if wrap: 
+        shifted2 = data2.shift(lag)
+        shifted2.iloc[:lag] = data2.iloc[-lag:].values
+        return data1.corr(shifted2)
+    else: 
+        return data1.corr(data2.shift(lag))
