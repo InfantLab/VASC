@@ -79,9 +79,9 @@ print(openposeapp)
 
 # +
 # where's the project folder? (with trailing slash)
-projectpath = os.getcwd() + "\\..\\lookit\\"
-# projectpath = "U:\\Caspar\\"
-videos_in = projectpath 
+#projectpath = os.getcwd() + "\\..\\Sangath"
+projectpath = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Measuring Responsive Caregiving\\Sangath"
+videos_in = "\\\\192.168.0.50\\Videos\\Obs Feeding videos _1.3.17\\" 
 
 # locations of videos and output
 # videos_out   = "E:\\SpeakNSign\\" + "out"
@@ -117,6 +117,8 @@ try:
 except:
     videos = {}
     print("Creating new videos.json")
+
+videos_out
 
 # ### EITHER 1.4.2 Read an Excel file of videos
 #
@@ -199,19 +201,25 @@ print(videos)
 #
 # We set a flag `namesfromfiles = True`.
 
+threegps = glob.glob(videos_in + "./*/*.3gp", recursive = True)
+print(threegps)
+
 # +
 #first get list of videos in the inbox
-avis = glob.glob(videos_in + "*.avi")
-mp4s = glob.glob(videos_in + "*.mp4")
+avis =     glob.glob(videos_in + "./*/*.avi", recursive = True)
+mp4s =     glob.glob(videos_in + "./*/*.mp4", recursive = True)
+threegps = glob.glob(videos_in + "./*/*.3gp", recursive = True)
 
 print("We found %d avis" % len(avis))
 print("We found %d mp4s" % len(mp4s))
+print("We found %d 3gps" % len(threegps))
 
 #For the moment we will manually specify what videos to process. 
 #TODO generate a list of force or skip videos to automate things slightly
 allvideos = []
 allvideos.extend(avis)
 allvideos.extend(mp4s)
+allvideos.extend(threegps)
 
 namesfromfiles = True
 
@@ -222,16 +230,20 @@ for thisvid in allvideos:
     fullname = os.path.basename(thisvid)
     vid, fmt = os.path.splitext(fullname) 
     #generate an structure to hold some info about this video
-    videos[vid] = {}  
-    cam = "camera1"
-    videos[vid][cam] = {} 
-    videos[vid][cam]["shortname"] = vid + "." + cam
-    videos[vid][cam]["stemname"] = vid
-    videos[vid][cam]["fullname"] = fullname
-    videos[vid][cam]["fullpath"] = thisvid
-    videos[vid][cam]["index"] = None         #the numerical index this data will have in np.array.
-    videos[vid][cam]["format"] = fmt
-    videos[vid][cam]["openpose"] =  {"exitcode" : None, "when" : None} 
+    if vid in videos: 
+        print(vid + " already in videos.json")
+    else:
+        print("Adding " + vid " to videos.json"))
+        videos[vid] = {}  
+        cam = "camera1"
+        videos[vid][cam] = {} 
+        videos[vid][cam]["shortname"] = vid + "." + cam
+        videos[vid][cam]["stemname"] = vid
+        videos[vid][cam]["fullname"] = fullname
+        videos[vid][cam]["fullpath"] = thisvid
+        videos[vid][cam]["index"] = None         #the numerical index this data will have in np.array.
+        videos[vid][cam]["format"] = fmt
+        videos[vid][cam]["openpose"] =  {"exitcode" : None, "when" : None} 
 # -
 
 # ### 1.5 Calling the OpenPose app
@@ -265,9 +277,9 @@ params["display"]  = "1"
 createoutputvideo = True #do we get openpose to create a video output?
 # -
 
-# #### The main openpose loop
+# ### The main openpose loop
 #
-# Call the openpose app for each of the videos at a time. For each one print the full command that we use so that you can use it manually to investigate any errors. 
+# Call the `openposedemo` app for each of the videos at a time. For each one print the full command that we use so that you can use it manually to investigate any errors. 
 #
 # Finally, we write a list of the processed videos to a file called `videos.json`. 
 # Note that we will add other information to this file as we go through other steps. 
@@ -399,7 +411,7 @@ for vid in videos:
 nvideos = len(videos)
 maxcameras = 3
 maxframes = 0
-maxpeople = 10 #maximum people we might expect (large upper bound)
+maxpeople = 15 #maximum people we might expect (large upper bound)
 ncoords = 75 #the length of the array coming back from openpose x,y coords of each point plus pafs
 
 for vid in videos:    

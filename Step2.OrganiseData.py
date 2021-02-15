@@ -62,24 +62,22 @@ logger.setLevel(logging.INFO)
 # * `True` - we will not display just the wireframes on black backround without the underlying images from the video. 
 # * `False` - we will *attempt to* draw video images - If videos are not available we fall back to anonymous mode 
 
-anon = True
+anon = False
 
 # ## 2.2 - Where are the data?
 #
 # This routine only needs to know where to find the processed data  and what are the base names. The summary information is listed in the `videos.json` file we created. The raw numerical data is in `allframedata.npz`.
 
 # +
-# where's the project folder?
-jupwd =  os.getcwd() + "\\"
-projectpath = os.getcwd() + "\\..\\SpeaknSign\\"
-#projectpath = os.getcwd() + "\\..\\lookit\\"
+# where's the project folder? (with trailing slash)
+#projectpath = os.getcwd() + "\\..\\Sangath"
+projectpath = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Measuring Responsive Caregiving\\Sangath"
+videos_in = "\\\\192.168.0.50\\Videos\\Obs Feeding videos _1.3.17\\" 
 
 
 # locations of videos and output
 videos_in = projectpath 
-videos_out   = projectpath + "out"
-#videos_out1 = video_out
-videos_out1 = "E:\\SpeakNSign\\out"
+videos_out   = projectpath + "\\out"
 videos_out_openpose   = videos_out + "\\openpose"
 videos_out_timeseries = videos_out + "\\timeseries"
 videos_out_analyses   = videos_out + "\\analyses"
@@ -105,8 +103,8 @@ for vid in videos:
         print(videos[vid][cam])
 
 #can reload the values without recomputing
-#reloaded = np.load(videos_out_timeseries + '\\allframedata.npz')
-reloaded = np.load(videos_out_timeseries + '\\cleandata.npz')
+reloaded = np.load(videos_out_timeseries + '\\allframedata.npz')
+#reloaded = np.load(videos_out_timeseries + '\\cleandata.npz')
 keypoints_original = reloaded["keypoints_array"] #the unprocessed data
 #keypoints_array = np.copy(keypoints_original)  #an array where we clean the data.
 
