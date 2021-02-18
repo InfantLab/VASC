@@ -80,8 +80,8 @@ print(openposeapp)
 # +
 # where's the project folder? (with trailing slash)
 #projectpath = os.getcwd() + "\\..\\Sangath"
-projectpath = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Measuring Responsive Caregiving\\Sangath"
-videos_in = "\\\\192.168.0.50\\Videos\\Obs Feeding videos _1.3.17\\" 
+projectpath = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Little Drummers"
+videos_in = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Little Drummers\\lookitdata" 
 
 # locations of videos and output
 # videos_out   = "E:\\SpeakNSign\\" + "out"
@@ -201,14 +201,14 @@ print(videos)
 #
 # We set a flag `namesfromfiles = True`.
 
-threegps = glob.glob(videos_in + "./*/*.3gp", recursive = True)
-print(threegps)
+mp4s =     glob.glob(videos_in + "*/*.mp4", recursive = True)
+print("We found %d mp4s" % len(mp4s))
 
 # +
 #first get list of videos in the inbox
-avis =     glob.glob(videos_in + "./*/*.avi", recursive = True)
-mp4s =     glob.glob(videos_in + "./*/*.mp4", recursive = True)
-threegps = glob.glob(videos_in + "./*/*.3gp", recursive = True)
+avis =     glob.glob(videos_in + "*/*.avi", recursive = True)
+mp4s =     glob.glob(videos_in + "*/*.mp4", recursive = True)
+threegps = glob.glob(videos_in + "*/*.3gp", recursive = True)
 
 print("We found %d avis" % len(avis))
 print("We found %d mp4s" % len(mp4s))
@@ -233,7 +233,7 @@ for thisvid in allvideos:
     if vid in videos: 
         print(vid + " already in videos.json")
     else:
-        print("Adding " + vid " to videos.json"))
+        print("Adding " + vid + " to videos.json")
         videos[vid] = {}  
         cam = "camera1"
         videos[vid][cam] = {} 
