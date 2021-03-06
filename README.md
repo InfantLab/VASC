@@ -65,6 +65,8 @@ The main requirements are:
 ### *Coming Soon* 
 A tutorial will be providing using an example of mother infant interaction and set of videos you can download.  
 
+In the meantime, you can watch this [walkthrough video](https://goldsmiths.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=5a113d3f-8f7b-454b-b3c9-ace300c99c41). 
+
 
 ## Scientific Background
 These tools were developed for a scientific project that was aims to see if parents and babies move in synchrony with each other and whether this predicts caring outcomes. The details are found here:
