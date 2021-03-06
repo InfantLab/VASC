@@ -26,7 +26,7 @@ First you need to make sure you have supporting software installed.
 ### Installing this code.
 
 You have two options to install this code. Either download the contents of this repository as a [zip file](https://github.com/InfantLab/VASC/archive/master.zip) to your local machine. 
-Or if you are familiar with Github you can [fork]() this repository and keep you own version of the 
+Or if you are familiar with Github you can [fork](https://docs.github.com/en/github/getting-started-with-github/fork-a-repo) this repository and keep you own copy of the files with a version history. We recommend using the [Github Desktop](https://docs.github.com/en/desktop) app to manage this.
 
 ### Running the code
 
