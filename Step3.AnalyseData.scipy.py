@@ -50,13 +50,14 @@ logger.setLevel(logging.INFO)
 
 # +
 jupwd =  os.getcwd() + "\\"
-projectpath = os.getcwd() + "\\..\\SpeakNSign\\"
-# projectpath = os.getcwd() + "\\..\\lookit\\"
+# where's the project data folder? 
+projectpath = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Measuring Responsive Caregiving\\VASCTutorial"
+#where are your video files? 
+videos_in = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Measuring Responsive Caregiving\\VASCTutorial\\demovideos"
+
 
 # locations of videos and output
-videos_in = projectpath 
-videos_out   = projectpath + "out"
-#videos_out = "E:\\SpeakNSign\\out"
+videos_out   = projectpath + "\\out"
 videos_out_openpose   = videos_out + "\\openpose"
 videos_out_timeseries = videos_out + "\\timeseries"
 videos_out_analyses   = videos_out + "\\analyses"
@@ -92,7 +93,7 @@ print(df.head())
 df = df.replace(0.0, np.nan)
 
 #are we going to use all the data or a subset?
-first = 501
+first = 0
 last = 8500
 
 df = df.truncate(before  = first, after = last)
@@ -297,7 +298,7 @@ infant = vardf[(vid, people[0], 'head')].to_frame()
 infant.head
 print(type(infant))
 
-vid = "SS003"
+#vid = "SS003"
 vardf[(vid, people[0], 'head')].corr(vardf[(vid, people[1], 'head')]) 
 
 who = ["infant","parent"]

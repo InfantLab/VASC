@@ -69,11 +69,10 @@ anon = False
 # This routine only needs to know where to find the processed data  and what are the base names. The summary information is listed in the `videos.json` file we created. The raw numerical data is in `allframedata.npz`.
 
 # +
-# where's the project folder? (with trailing slash)
-#projectpath = os.getcwd() + "\\..\\Sangath"
-projectpath = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Measuring Responsive Caregiving\\Sangath"
-videos_in = "\\\\192.168.0.50\\Videos\\Obs Feeding videos _1.3.17\\" 
-
+# where's the project folder? (without trailing slash)
+projectpath = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Measuring Responsive Caregiving\\VASCTutorial"
+#where are the videos
+videos_in = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Measuring Responsive Caregiving\\VASCTutorial\\demovideos"
 
 # locations of videos and output
 videos_in = projectpath 
@@ -102,11 +101,17 @@ for vid in videos:
     for cam in videos[vid]:
         print(videos[vid][cam])
 
-#can reload the values without recomputing
+# ### Step 2.2.1 Load or reload the raw/cleaned data.
+#
+# At this step we can either load the unprocessed data from Step 1 - `allframedata.npz` or we can load a cleaned or partially cleaned set of data that has already by processed in an earlier session - `cleandata.npz`.
+
+# EITHER 
+# can reload the original values without recomputing
 reloaded = np.load(videos_out_timeseries + '\\allframedata.npz')
+# OR
+# load clean or partially cleaned data from a previous session
 #reloaded = np.load(videos_out_timeseries + '\\cleandata.npz')
 keypoints_original = reloaded["keypoints_array"] #the unprocessed data
-#keypoints_array = np.copy(keypoints_original)  #an array where we clean the data.
 
 
 keypoints_array = keypoints_original  #an array where we clean the data.
@@ -506,12 +511,13 @@ output
 # ### Step 2.6: TODO - Save your game
 #
 # Ought to be able to save the array when you half way through cleaning it. So you don't lose progress can come back another time. 
+# You can do this manually at the moment by running step 2.7 to save current progress and then restarting by reloading `cleandata.npz` in step 2.2.1 
 
 keypoints_array.shape
 
-# ### *Warning these steps can take several minutes each...*
-#
 # ## Step 2.7: Save the numpy data!
+#
+# ### *Warning, with BIG datasets, these steps can take multiple minutes each...*
 #
 # Saving the data at this stage so we don't have to repeat these steps again if we reorganise or reanalyse the data.
 #
@@ -528,8 +534,8 @@ with open(videos_out + '\\clean.json', 'w') as outfile:
 # in the time series folder we save the data file. 
 #in a compressed format as it has a lot of empty values
 np.savez_compressed(videos_out_timeseries + '\\cleandata.npz', keypoints_array=keypoints_array)
+# -
 
-# + [markdown] jupyter={"source_hidden": true}
 # ## Step 2.8: Save a pandas dataframe version too.
 #
 # Most of our analysis will be done with SciPy which uses pandas dataframes as its main data format. So let's build a multiindex dataframe containing just the data we need. 
@@ -545,7 +551,6 @@ np.savez_compressed(videos_out_timeseries + '\\cleandata.npz', keypoints_array=k
 #
 # <img src="multiindexdataframe.png" alt="multiindex" width="871"/>
 #
-# -
 
 #optional
 #can reload the clean values without recomputing steps above

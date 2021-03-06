@@ -24,12 +24,19 @@
 
 # ### 0.0 - Jupyter notebook environment
 #
-# *If you can read this you are probably already running Jupyter. Congratulations!*
+# *If you can read this you are probably already running [Jupyter](https://jupyter.org/). Congratulations!*
 #
-# We recommend using the Anaconda Data Science platform (Python 3 version) 
+# There's a [getting started guide](https://jupyter.readthedocs.io/en/latest/content-quickstart.html) at the [Jupyter documentation page](https://jupyter.readthedocs.io/en/latest/index.html)
 #
+# If you're impatient we recommend using the Anaconda Data Science platform (Python 3 version) 
 # https://www.anaconda.com/distribution/
 #
+# and then running the command
+# ```
+# conda install -c conda-forge jupyterlab
+# ```
+#
+# These notebooks will run in the original Jupyter Notebook format or with the newer JupyterLab interface. We recommend the latter. 
 
 # ### 0.1 - OpenPoseDemo application
 #
@@ -37,7 +44,7 @@
 #
 # Additionally, you need to download the trained neural-network models that OpenPose uses. To do this go to the `models` subdirectory of OpenPose directory, and double-click / run the `models.bat` script.
 #
-# The `openposedemo` bin/exe file can be run manually from the command line. It is worth trying this first so you understand what  `openposedemo` is. See [this guide](https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/demo_overview.md) or open a terminal app or Windows Powershell, navigate to the openpose installation folder and then try this command
+# The `openposedemo` bin/exe file can be run manually from the command line. It is worth trying this first so you understand what  `openposedemo` is. See [this guide](https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/demo_overview.md) or open a terminal app or Windows Powershell, navigate to the openpose installation folder and then try this command 
 #
 # ```
 # :: Windows
@@ -45,19 +52,21 @@
 # # Mac/Linux
 # ./build/examples/openpose/openpose.bin --video examples/media/video.avi --write_json output
 # ```
+#
+# Changing the `examples\media\video.avi` to the path to another video on your machine will process that instead. 
 
 # ### 0.2 - Load python libraries
 #
 # There are a handful of python libraries that we use for things like image manipulation, file operations, maths and stats. Many are probably already installed by default such as `os, math, numpy, pandas, matplotlib`. Others need adding to our python environment. 
 #
-# PyArrow is a useful extension for saving Pandas and NumPy data. We need it to move the large array created in Step 2 to Step 3. 
+# For example, `PyArrow` is a useful extension for saving Pandas and NumPy data. We need it to move the large array created in Step 2 to Step 3. 
 #
 # **If you are using conda then run the following command to install all the main libraries.**
 # ```
 # conda install glob2 opencv pyarrow xlrd openpyxl
 # ```
 # #### Troubleshooting
-# If when you run the code in Steps 1, 2 & 3 you might see an error like `ModuleNotFoundError: No module named 'glob'` this is because that python module needs to be installed on your computer. If you use Anaconda, the missing module can usually be installed with the command `conda install glob`.
+# When you run the code in Steps 1, 2 & 3 you might see an error like `ModuleNotFoundError: No module named 'glob'` this is because that python module needs to be installed on your computer. If you use Anaconda, the missing module can usually be installed with the command `conda install glob`. You then need to restart the script with the problem by choosing `Restart kernel..` from the Kernel menu dropdown.
 
 # ### 0.3 - iPyWidgets
 #
@@ -82,14 +91,14 @@
 
 # ### 0.4 - JupyText 
 #
-# The standard ipython notebook format (`mynotebook.ipynb`) is a single file that mixes together code, formatting commands and outputs both as the results of running code and embedded binaries (images, graphs). This makes it non-human readable and very hard to tell what changes from one improvement to the next. `Jupytext` solves this by creating a synchronised plain text version of the file saved as a plain `.py` file (`mynotebook.py`). These are useful for developers (as it helps you track differences between versions more easily) but can mostly be ignored by users. 
+# The standard ipython notebook format (`mynotebook.ipynb`) is a single file that mixes together code, formatting commands and outputs both as the results of running code and embedded binaries (images, graphs). This makes it non-human readable and very hard to tell what changed from one version to the next. `Jupytext` solves this by creating a synchronised plain text version of the file saved as a plain `.py` file (`mynotebook.py`). These are useful for developers (as it helps you track differences between versions more easily) but can mostly be ignored by users. 
 #
 #
 # Install JupyText by running
 #
 # ```conda install -c conda-forge jupytext```
 
-# ### 0.6 Notebook extensions (optional)
+# ### 0.5 Notebook extensions (optional)
 # Installing Jupyter notebook extenstions provide some useful tools for navigating notebooks (e.g. table of contents) and other features.
 #
 # To install, run these commands in terminal window.

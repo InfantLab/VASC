@@ -47,8 +47,9 @@ from datetime import datetime
 
 # +
 # location of openposedemo - THIS WILL BE DIFFERENT ON YOUR COMPUTER
+# openposepath = "C:\\Users\\cas\\openpose-1.7.0-binaries-win64-gpu-python3.7-flir-3d_recommended\\"
+# I've had problems with version 1.7.0 so i'm staying with version 1.5.0 for the moment.
 openposepath = "C:\\Users\\cas\\openpose-1.5.0-binaries-win64-gpu-python-flir-3d_recommended\\"
-#openposepath = "C:\\Users\\caspar\\openpose-1.4.0-win64-cpu-binaries\\"
 
 if sys.platform == "win32":
     app = "bin\\OpenPoseDemo.exe"
@@ -78,10 +79,10 @@ print(openposeapp)
 # ```
 
 # +
-# where's the project folder? (with trailing slash)
-#projectpath = os.getcwd() + "\\..\\Sangath"
-projectpath = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Measuring Responsive Caregiving\\Sangath"
-videos_in = "\\\\192.168.0.50\\Videos\\Obs Feeding videos _1.3.17\\" 
+# where's the project data folder? (without trailing slash)
+projectpath = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Measuring Responsive Caregiving\\VASCTutorial"
+#where are your video files? 
+videos_in = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Measuring Responsive Caregiving\\VASCTutorial\\demovideos"
 
 # locations of videos and output
 # videos_out   = "E:\\SpeakNSign\\" + "out"
@@ -118,9 +119,8 @@ except:
     videos = {}
     print("Creating new videos.json")
 
-videos_out
-
-# ### EITHER 1.4.2 Read an Excel file of videos
+# ### EITHER
+# ### 1.4.2.A Read an Excel file of videos
 #
 # We expect the first column of the spreadsheet to tell us the base name for each participant and columns 2 to 4 contains the full name and location of the videos.
 #
@@ -191,24 +191,24 @@ for ind in videolist.index :
 print(videos)
 # -
 
-# ### Or 1.4.3 scanning all videos in particular folder 
+# ### Or 
+# ### 1.4.3.B scanning all videos in particular folder 
 #
-# In which case we look at all videos in `videos_in` let the names of the files also provide the base names for each participant we create.  
+# In which case we look at all videos in `videos_in` and it's subfolders. 
 #
-# We will reference these files by the video names so myvid1.avi is found in `videos["myvid1"]`.
+# We let the names of the files also provide the base names for each participant we create.  
+#
+# We will reference these files by the video names in our `videos.json` data structure. So myvid1.avi is found in `videos["myvid1"]`.
 #
 # However, in other cases we will allow for possibility of multiple camera angles so this defaults to `"camera1"`.
 #
 # We set a flag `namesfromfiles = True`.
 
-threegps = glob.glob(videos_in + "./*/*.3gp", recursive = True)
-print(threegps)
-
 # +
-#first get list of videos in the inbox
-avis =     glob.glob(videos_in + "./*/*.avi", recursive = True)
-mp4s =     glob.glob(videos_in + "./*/*.mp4", recursive = True)
-threegps = glob.glob(videos_in + "./*/*.3gp", recursive = True)
+#first get list of videos in the video folder and subfolders.
+avis =     glob.glob(videos_in + "/**/*.avi", recursive = True)
+mp4s =     glob.glob(videos_in + "/**/*.mp4", recursive = True)
+threegps = glob.glob(videos_in + "/**/*.3gp", recursive = True)
 
 print("We found %d avis" % len(avis))
 print("We found %d mp4s" % len(mp4s))
@@ -233,7 +233,7 @@ for thisvid in allvideos:
     if vid in videos: 
         print(vid + " already in videos.json")
     else:
-        print("Adding " + vid " to videos.json"))
+        print("Adding " + vid + " to videos.json")
         videos[vid] = {}  
         cam = "camera1"
         videos[vid][cam] = {} 
