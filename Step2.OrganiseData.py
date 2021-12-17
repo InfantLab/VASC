@@ -8,7 +8,7 @@
 #       format_version: '1.5'
 #       jupytext_version: 1.7.1
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -29,7 +29,7 @@
 #
 # <img src="keypoints_pose_25.png" alt="BODY-25 mapping" width="240"/>
 
-# ## 2.1 - import modules and initialise variables
+# ## 2.0 - import modules and initialise variables
 
 # +
 import os                #operating system functions
@@ -55,6 +55,29 @@ logger.setLevel(logging.INFO)
 # %pdb on   
 # -
 
+# ## 2.1 Settings?
+#
+# Load a json file that tells us where to find our videos and where to save the data. You should create a different settings file for each project. Then you don't need to change any other values in the script for Step 1 or Step 2.
+#
+# TODO - write a helper to create a settings file
+#
+
+# +
+settingsjson = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Little Drummers\\VASC\\settings.json"
+
+try:
+    with open(settingsjson) as json_file:
+        settings = json.load(json_file)
+        print("Existing settings.json found..")
+except json.JSONDecodeError:
+    logging.exception("Settings file was not valid JSON.")
+except Exception as e:
+        emsg = str(e)
+        #show the error
+        print("Error: ",emsg)
+        print("No setting.json file found!\nPlease see Step 0 for instructions")
+# -
+
 # #### 2.1.1 - anonymise the videos?
 #
 # Setting the `anon` flag to 
@@ -62,39 +85,42 @@ logger.setLevel(logging.INFO)
 # * `True` - we will not display just the wireframes on black backround without the underlying images from the video. 
 # * `False` - we will *attempt to* draw video images - If videos are not available we fall back to anonymous mode 
 
-anon = False
+anon = settings["flags"]["anon"]
+
+includeHands = settings["flags"]["includeHands"]
 
 # ## 2.2 - Where are the data?
 #
 # This routine only needs to know where to find the processed data  and what are the base names. The summary information is listed in the `videos.json` file we created. The raw numerical data is in `allframedata.npz`.
 
 # +
-# where's the project folder? (with trailing slash)
-#projectpath = os.getcwd() + "\\..\\Sangath"
-projectpath = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Measuring Responsive Caregiving\\Sangath"
-videos_in = "\\\\192.168.0.50\\Videos\\Obs Feeding videos _1.3.17\\" 
-
+# where's the project data folder? (with trailing slash)
+projectpath = settings["paths"]["project"]
+#where are your video files? 
+videos_in = settings["paths"]["videos_in"]
 
 # locations of videos and output
-videos_in = projectpath 
-videos_out   = projectpath + "\\out"
-videos_out_openpose   = videos_out + "\\openpose"
-videos_out_timeseries = videos_out + "\\timeseries"
-videos_out_analyses   = videos_out + "\\analyses"
+videos_out = settings["paths"]["videos_out"]
+videos_out_openpose   = settings["paths"]["videos_out_openpose"]
+videos_out_timeseries = settings["paths"]["videos_out_timeseries"]
+videos_out_analyses   = settings["paths"]["videos_out_analyses"]
 
+print(videos_in)
+print(videos_out)
 print(videos_out_openpose)
 print(videos_out_timeseries)
 print(videos_out_analyses)
 # -
 
 #retrieve the list of base names of processed videos.
+videosjson = settings["paths"]["videos_out"] + '\\' + settings["filenames"]["videos_json"]
 try:
-    with open(videos_out + '\\videos.json') as json_file:
+    with open(videosjson) as json_file:
         videos = json.load(json_file)
         print("Existing videos.json found..")
 except:
     videos = {}
-    print("videos.json not found in ", videos_out)
+    print("Creating new videos.json")
 
 #optional - check the json
 for vid in videos:  
@@ -102,14 +128,44 @@ for vid in videos:
     for cam in videos[vid]:
         print(videos[vid][cam])
 
-#can reload the values without recomputing
-reloaded = np.load(videos_out_timeseries + '\\allframedata.npz')
-#reloaded = np.load(videos_out_timeseries + '\\cleandata.npz')
-keypoints_original = reloaded["keypoints_array"] #the unprocessed data
+# ### 2.2.2 Original or clean?
+#
+# Data from Step 1 was saveed in our "alldatanpz" file. Once cleaned, a new copy of data will be saved in "cleandatanpz"
+#
+# It will often take time to clean data so we save progess as we go along. To do this non-distructively we create a new
+#
+# The `cleaned` flag tells us whether to start from original data or from a (partially) cleaned set. 
+
+cleaned = settings["flags"]["cleaned"]
+
+# +
+if not cleaned:
+    #can reload the values without recomputing
+    reloaded = np.load(videos_out_timeseries +  "\\" + settings["filenames"]["alldatanpz"])
+    if includeHands:
+        LH = np.load(videos_out_timeseries +  "\\" + settings["filenames"]["lefthandnpz"])
+        RH = np.load(videos_out_timeseries +  "\\" + settings["filenames"]["righthandnpz"])
+else: 
+    #or we can load an cleaned/partially cleaned dataset..
+    reloaded = np.load(videos_out_timeseries  +  "\\" + settings["filenames"]["cleannpz"])
+    if includeHands:
+        LH = np.load(videos_out_timeseries +  "\\" + settings["filenames"]["cleanleftnpz"])
+        RH = np.load(videos_out_timeseries +  "\\" + settings["filenames"]["cleanrightnpz"])
+
 #keypoints_array = np.copy(keypoints_original)  #an array where we clean the data.
+keypoints_original = reloaded["keypoints_array"] #the data before this processing (for interim reseting)
+keypoints_array = np.copy(keypoints_original)  #an array where we clean the data.
 
+if includeHands:
+    LH_original = LH["keypoints_array"] #the unprocessed data
+    RH_original = RH["keypoints_array"] #the unprocessed data        
+    LH_array = np.copy(LH_original)  #an array where we clean the data.
+    RH_array = np.copy(RH_original)  #an array where we clean the data.
+else:
+    LH_array = None
+    RH_array = None 
+# -
 
-keypoints_array = keypoints_original  #an array where we clean the data.
 
 #check the shape
 keypoints_array.shape
@@ -439,6 +495,9 @@ def drawOneFrame(vid, cam, frameNum):
     vasc.drawPoints(frame,keypoints_array[v,c,frameNum,:,:],videos[vid][cam]["maxpeople"])
     vasc.drawLines(frame,keypoints_array[v,c,frameNum,:,:],videos[vid][cam]["maxpeople"])
     vasc.drawBodyCG(frame,keypoints_array[v,c,frameNum,:,:],videos[vid][cam]["maxpeople"])
+    if includeHands:
+        vasc.drawHands(frame,RH_array[v,c,frameNum,:,:],videos[vid][cam]["maxpeople"])
+        vasc.drawHands(frame,LH_array[v,c,frameNum,:,:],videos[vid][cam]["maxpeople"])
     #send the image to the canvas
     img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     hiddencanvas = Canvas(width=img.shape[1], height=img.shape[0])
@@ -522,12 +581,16 @@ keypoints_array.shape
 
 # +
 #update the json file in the video out directory
-with open(videos_out + '\\clean.json', 'w') as outfile:
+with open(videos_out + '\\' + settings["filenames"]["clean_json"], 'w') as outfile:
     json.dump(videos, outfile)
 
 # in the time series folder we save the data file. 
 #in a compressed format as it has a lot of empty values
-np.savez_compressed(videos_out_timeseries + '\\cleandata.npz', keypoints_array=keypoints_array)
+np.savez_compressed(videos_out_timeseries + '\\' + settings["filenames"]["cleannpz"] , keypoints_array=keypoints_array)
+if includeHands:
+    np.savez_compressed(videos_out_timeseries + '\\' + settings["filenames"]["cleanleftnpz"] , keypoints_array=LH_array)
+    np.savez_compressed(videos_out_timeseries + '\\' + settings["filenames"]["cleanrightnpz"] , keypoints_array=RH_array)
+
 
 # + [markdown] jupyter={"source_hidden": true}
 # ## Step 2.8: Save a pandas dataframe version too.
@@ -545,18 +608,29 @@ np.savez_compressed(videos_out_timeseries + '\\cleandata.npz', keypoints_array=k
 #
 # <img src="multiindexdataframe.png" alt="multiindex" width="871"/>
 #
-# -
 
+# +
 #optional
 #can reload the clean values without recomputing steps above
-reloaded = np.load(videos_out_timeseries + '\\cleandata.npz')
+reloaded = np.load(videos_out_timeseries + '\\' + settings["filenames"]["cleannpz"])
 keypoints_array = reloaded["keypoints_array"] #the unprocessed data
 keypoints_array.shape
 
+#TODO reload hands
+
+# +
 #delete all cameras except 0 
 keypoints_array = np.delete(keypoints_array,np.s_[1:],1)
 #delete all people except 0 & 1
 keypoints_array = np.delete(keypoints_array,np.s_[2:],3)
+
+if includeHands:
+    #Same for LH & RH
+    LH_array = np.delete(LH_array,np.s_[1:],1)
+    LH_array = np.delete(LH_array,np.s_[2:],3)
+    RH_array = np.delete(RH_array,np.s_[1:],1)
+    RH_array = np.delete(RH_array,np.s_[2:],3)
+# -
 
 
 #truncate the timeseries - many videos are longer than we need
@@ -610,6 +684,21 @@ for vid in videos:
 #Sort the columns into alphabetical order (helps with step 3 calculations.)
 cleandf = cleandf.sort_index(axis = 1)
 
+if includeHands:
+    coords = list(range(3*vasc.handPoints)) #we have 3 x 21 coordinates to store
+    col_index = pd.MultiIndex.from_product([toplevel,participants,coords], names=col_names)
+    cleanLH = pd.DataFrame(columns=col_index, index = timeseries)
+    cleanRH = pd.DataFrame(columns=col_index, index = timeseries)
+    for vid in videos:
+        for p in range(2) :
+            v = videos[vid]["camera1"]["v"]
+            part = participants[p]
+            for r in range(3*vasc.handPoints):
+                cleanLH[(vid, part, r)] = LH_array[v,0,:,p,r]
+                cleanRH[(vid, part, r)] = RH_array[v,0,:,p,r]
+    cleanLH = cleanLH.sort_index(axis = 1)
+    cleanRH = cleanRH.sort_index(axis = 1)
+
 # ### Finally save this to a compressed file.
 #
 # We use the fast `parquet` format with library `pyarrow` in order to preserve our hierarchical index in a compressed format. We save into the timeseries sub-folder. 
@@ -618,8 +707,20 @@ cleandf = cleandf.sort_index(axis = 1)
 import pyarrow.parquet as pq
 import pyarrow as pa
 
-pq.write_table(pa.Table.from_pandas(cleandf), videos_out_timeseries + '\\cleandata.parquet')
+# +
+pq.write_table(pa.Table.from_pandas(cleandf), videos_out_timeseries + '\\' + settings["filenames"]["cleandataparquet"])
 
+if includeHands:
+    pq.write_table(pa.Table.from_pandas(cleanLH), videos_out_timeseries + '\\' + settings["filenames"]["lefthandparquet"])
+    pq.write_table(pa.Table.from_pandas(cleanRH), videos_out_timeseries + '\\' + settings["filenames"]["righthandparquet"])
+
+
+
+
+
+# -
+
+#Optional check
 print('reading parquet file:')
 pqdf = pq.read_table(videos_out_timeseries + '\\cleandata.parquet').to_pandas()
 print(pqdf.head())
@@ -627,4 +728,4 @@ print(pqdf.head())
 
 # #### That's it. 
 #
-# Now go onto [Step 3 - Analyse the data](Step3.AnalyseData.scipy)
+# Now go onto [Step 3 - Analyse the data](Step3.AnalyseData.scipy.ipynb)

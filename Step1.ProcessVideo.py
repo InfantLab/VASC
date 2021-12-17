@@ -8,12 +8,13 @@
 #       format_version: '1.5'
 #       jupytext_version: 1.7.1
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
 
 # # Video Actor Synchroncy and Causality (VASC)
+#
 # ## RAEng: Measuring Responsive Caregiving Project
 # ### Caspar Addyman, 2020
 # ### https://github.com/infantlab/VASC
@@ -22,7 +23,7 @@
 #
 # This script uses [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) human figure recognition neural network to create labeled wireframes for each figure in each frame of a video. OpenPoseDemo will go through a video frame by frame outputing a JSON file for each frame that contains a set of coordinate points and for a wireframe for each video.
 
-# ## 1.1 - Libraries
+# ## 1.0 - Libraries
 
 # +
 #import the python libraries we need
@@ -32,23 +33,49 @@ import time
 import glob
 import json
 import cv2               #computervision toolkit
+import logging
 import numpy as np
 import pandas as pd
 from datetime import datetime
 
-
 #turn on debugging
 # %pdb on
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 # -
+
+# ### 1.1 Settings?
+#
+# Load a json file that tells us where to find our videos and where to save the data.  You should create a different settings file for each project. Then you don't need to change any other values in the script for Step 1 or Step 2. 
+#
+# `TODO - write a helper to create a settings file`
+
+# +
+settingsjson = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Little Drummers\\VASC\\settings.json"
+
+try:
+    with open(settingsjson) as json_file:
+        settings = json.load(json_file)
+        print("Existing settings.json found..")
+except json.JSONDecodeError:
+    logging.exception("Settings file was not valid JSON.")
+except Exception as e:
+        emsg = str(e)
+        #show the error
+        print("Error: ",emsg)
+        print("No setting.json file found!\nPlease see Step 0 for instructions")
+# -
+
+#optional - have a look at our settings to make sure they're what we expect
+print(settings)
 
 # ### 1.2 Where is OpenPose?
 #
-# We need the full path to your openpose directory
+# We need the full path to your openpose directory (this is in settings)
 
 # +
 # location of openposedemo - THIS WILL BE DIFFERENT ON YOUR COMPUTER
-openposepath = "C:\\Users\\cas\\openpose-1.5.0-binaries-win64-gpu-python-flir-3d_recommended\\"
-#openposepath = "C:\\Users\\caspar\\openpose-1.4.0-win64-cpu-binaries\\"
+openposepath = settings["paths"]["openpose"]
 
 if sys.platform == "win32":
     app = "bin\\OpenPoseDemo.exe"
@@ -57,11 +84,11 @@ else:
 
 openposeapp = openposepath + app
 print(openposeapp)
-# -
 
+# + [markdown] tags=[]
 # ### 1.3 Where are your videos?
 #
-# In the next cell you need to specify the folder with your set of video files. So that we process them. These scripts use the following director structure. It expects your videos to be in a subfolder of your project 
+# In the next cell you need to specify the folder with your set of video files. So that we process them. These scripts use the following directory structure. It expects your videos to be in a subfolder of your project 
 #
 # ```
 # path\to\project\myvideos
@@ -78,17 +105,16 @@ print(openposeapp)
 # ```
 
 # +
-# where's the project folder? (with trailing slash)
-#projectpath = os.getcwd() + "\\..\\Sangath"
-projectpath = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Little Drummers"
-videos_in = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Little Drummers\\lookitdata" 
+# where's the project data folder? (with trailing slash)
+projectpath = settings["paths"]["project"]
+#where are your video files? 
+videos_in = settings["paths"]["videos_in"]
 
 # locations of videos and output
-# videos_out   = "E:\\SpeakNSign\\" + "out"
-videos_out = projectpath + "\\out" 
-videos_out_openpose   = videos_out + "\\openpose"
-videos_out_timeseries = videos_out + "\\timeseries"
-videos_out_analyses   = videos_out + "\\analyses"
+videos_out = settings["paths"]["videos_out"]
+videos_out_openpose   = settings["paths"]["videos_out_openpose"]
+videos_out_timeseries = settings["paths"]["videos_out_timeseries"]
+videos_out_analyses   = settings["paths"]["videos_out_analyses"]
 
 print(videos_in)
 print(videos_out)
@@ -110,17 +136,17 @@ print(videos_out_analyses)
 # If you want to start afresh just delete this single file and everything gets reprocessed from scratch.
 
 #retrieve the list of base names of processed videos.
+videosjson = settings["paths"]["videos_out"] + '\\' + settings["filenames"]["videos_json"]
 try:
-    with open(videos_out + '\\videos.json') as json_file:
+    with open(videosjson) as json_file:
         videos = json.load(json_file)
         print("Existing videos.json found..")
 except:
     videos = {}
     print("Creating new videos.json")
 
-videos_out
-
-# ### EITHER 1.4.2 Read an Excel file of videos
+# ### EITHER 
+# ### 1.4.2.A Read an Excel file of videos
 #
 # We expect the first column of the spreadsheet to tell us the base name for each participant and columns 2 to 4 contains the full name and location of the videos.
 #
@@ -191,7 +217,8 @@ for ind in videolist.index :
 print(videos)
 # -
 
-# ### Or 1.4.3 scanning all videos in particular folder 
+# ### Or 
+# ### 1.4.3.B Scanning all videos in particular folder 
 #
 # In which case we look at all videos in `videos_in` let the names of the files also provide the base names for each participant we create.  
 #
@@ -200,9 +227,15 @@ print(videos)
 # However, in other cases we will allow for possibility of multiple camera angles so this defaults to `"camera1"`.
 #
 # We set a flag `namesfromfiles = True`.
+#
+# If your vidoes aren't appearing there might be too many or too few trailing slashes in your path.
 
+#quick check to see if we can find videos
 mp4s =     glob.glob(videos_in + "*/*.mp4", recursive = True)
 print("We found %d mp4s" % len(mp4s))
+
+#just checking i'm loooking int the right place
+videos_in
 
 # +
 #first get list of videos in the inbox
@@ -261,10 +294,14 @@ for thisvid in allvideos:
 #
 # Other useful params
 #  ```
+# --hand                #include a model and points for the hands. 
 # --frame_first  100    #start from frame 100
 # --display 0           #don't show the images as they are processed
 #  ```
 #
+
+#should we generate and process points for hand data?
+includeHands = settings["flags"]["includeHands"]
 
 # +
 #put all params in a dictionary object
@@ -273,6 +310,8 @@ params["write_json"] = videos_out_openpose
 # params["write_images"] = videos_out_openpose  #for the moment dump images in output file - TODO name subfolder
 #params["disable_blending"] = "false"
 params["display"]  = "1"
+if includeHands:
+    params["hand"] = ""
 
 createoutputvideo = True #do we get openpose to create a video output?
 # -
@@ -318,6 +357,8 @@ for vid in videos:
                 print(openposecommand)
                 exitcode = os.system(openposecommand)
                 videos[vid][cam]["openpose"]["exitcode"] = exitcode
+                videos[vid][cam]["openpose"]["optstring"] = optstring
+                videos[vid][cam]["openpose"]["handdata"] = includeHands
                 # Log the time again
                 time_end = time.time()
                 if (exitcode == 0):
@@ -329,14 +370,15 @@ for vid in videos:
                     print ("Done " + vid + cam)
                     print ("It took %d seconds for conversion." % (time_end-time_start))
                 else:
-                    print("OpenPose error. Exit code %d" % exitcode)
                     videos[vid][cam]["openpose"]["exitcode"] = exitcode
                     videos[vid][cam]["openpose"]["when"] = datetime.now().isoformat()
+                    print("OpenPose error. Exit code %d" % exitcode)
+                    print ("Conversion failed after %d seconds." % (time_end-time_start))
             except Exception as e:
                 print("Error: ", e)
                 pass
     #after each new id we save the json data
-    with open(videos_out + '\\videos.json', 'w') as outfile:
+    with open(videosjson, 'w') as outfile:
         json.dump(videos, outfile)
         print('videos.json updated')
 
@@ -352,7 +394,7 @@ os.chdir(currdir)
 # This routine needs to know where to find the processed videos and what are the base names. These are listed in the `videos.json` file we created.
 
 #retrieve the list of base names of processed videos.
-with open(videos_out + '\\videos.json') as json_file:
+with open(videosjson) as json_file:
     videos = json.load(json_file)
 
 # First find out the height, width and frames per second for each video and add this to `videos.json`
@@ -412,7 +454,8 @@ nvideos = len(videos)
 maxcameras = 3
 maxframes = 0
 maxpeople = 15 #maximum people we might expect (large upper bound)
-ncoords = 75 #the length of the array coming back from openpose x,y coords of each point plus pafs
+ncoords = 75 #the length of the array coming back from openpose x,y coords of each point plus cafs
+hcoords = 63
 
 for vid in videos:    
     for cam in videos[vid]:    
@@ -426,10 +469,20 @@ for vid in videos:
     
     
 keypoints_array = np.zeros([nvideos,maxcameras, maxframes,maxpeople,ncoords]) #big array to hold all the numbers
+
+#also create arrays for hand data 
+righthand_array = np.zeros([nvideos,maxcameras, maxframes,maxpeople,hcoords]) #big array to hold all the numbers
+lefthand_array  = np.zeros([nvideos,maxcameras, maxframes,maxpeople,hcoords]) #big array to hold all the numbers
+
 print("Initialise numpy array of size", keypoints_array.shape)
 # -
 
 # Now loop through all the videos copying the frame data into our big `keypoints_array` and also seeing how many people (max) are detected in each one. 
+
+#update the json file in the video out directory
+with open(videosjson, 'w') as outfile:
+    json.dump(videos, outfile)
+
 
 # +
 npeople = np.zeros(maxframes)  #an array to track how many people detected per frame.
@@ -449,8 +502,10 @@ for vid in videos:
                 data = json.load(read_file)
                 j = 0
                 for p in data["people"]:
-                    keypoints = p["pose_keypoints_2d"]  
-                    keypoints_array[v,c,i,j,:]=keypoints
+                    keypoints_array[v,c,i,j,:]= p["pose_keypoints_2d"]
+                    if includeHands:
+                        righthand_array[v,c,i,j,:]= p["hand_right_keypoints_2d"] 
+                        lefthand_array[v,c,i,j,:] = p["hand_left_keypoints_2d"] 
                     j += 1
                 npeople[i] = j
                 i += 1
@@ -469,6 +524,10 @@ for vid in videos:
 
 keypoints_array = np.delete(keypoints_array,np.s_[int(globalmaxpeople):],3)
 
+if includeHands:
+    righthand_array = np.delete(righthand_array,np.s_[int(globalmaxpeople):],3)
+    lefthand_array  = np.delete(lefthand_array, np.s_[int(globalmaxpeople):],3)                                 
+
 print("keypoints_array has size", keypoints_array.shape)
 # -
 
@@ -482,12 +541,16 @@ print("keypoints_array has size", keypoints_array.shape)
 
 # +
 #update the json file in the video out directory
-with open(videos_out + '\\videos.json', 'w') as outfile:
+with open(videosjson, 'w') as outfile:
     json.dump(videos, outfile)
 
 # in the time series folder we save the data file. 
 #in a compressed format as it has a lot of empty values
-np.savez_compressed(videos_out_timeseries + '\\allframedata.npz', keypoints_array=keypoints_array)
+np.savez_compressed(videos_out_timeseries + "\\" + settings["filenames"]["alldatanpz"], keypoints_array=keypoints_array)
+
+if includeHands:
+    np.savez_compressed(videos_out_timeseries + '\\' + settings["filenames"]["righthandnpz"], keypoints_array=righthand_array)
+    np.savez_compressed(videos_out_timeseries + '\\' + settings["filenames"]["lefthandnpz"],  keypoints_array=lefthand_array)
 
 
 # -
