@@ -8,7 +8,7 @@
 #       format_version: '1.5'
 #       jupytext_version: 1.7.1
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -78,6 +78,10 @@
 # To make these work with the newer Jupyter Lab we also need to install the widgets lab extension, like so:
 #
 # ```
+# Jupyter 3.0 (current)
+# conda install -c conda-forge jupyterlab_widgets
+#
+# Jupyter 2.0 (older)
 # conda install -c conda-forge nodejs
 # jupyter labextension install @jupyter-widgets/jupyterlab-manager
 # jupyter labextension install @jupyter-widgets/jupyterlab-manager ipycanvas
