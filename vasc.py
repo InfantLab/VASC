@@ -119,6 +119,16 @@ leftarmx, leftarmy, leftarmc = xyc(leftarm)
 leftarmxys = leftarmx + leftarmy
 leftarmxys.sort()  # sort for clarity
 
+rightwrist = [4]
+rightwristx, rightwristy, rightwristc = xyc(rightwrist)
+rightwristxys = rightwristx + rightwristy
+rightwristxys.sort()  # sort for clarity
+
+leftwrist = [7]
+leftwristx, leftwristy, leftwristc = xyc(leftwrist)
+leftwristxys = leftwristx + leftwristy
+leftwristxys.sort()  # sort for clarity
+
 arms =  [2, 3, 4, 5, 6, 7]
 armsx, armsy, armsc = xyc(arms)
 armsxys = armsx + armsy
@@ -276,6 +286,63 @@ def averageCoordinateTimeSeries(df,indices,videos = "All", people = "Both"):
         
     return avgdf
 
+def averageArmHandTimeSeries(bodydata,handdata,armindices,handindices, videos = "All", people = "Both", armtohandweighting = 1):
+    """Function to find the average of a set of coordinates from the persons arm and from their hand,
+    provided in separate dataframs. 
+    It will take the average of the non-zero keypoints. WHen there is hand data it contributes lots of individual points so we have weighting value so that position of wrist is useful. Higher values mean greater contribuiong from arm. 
+    Args:
+        bodydata: timeseries dataframe.
+        handdata: timeseries dataframe.
+        indices: if this is a list then we average over indices in list.
+                 if it is a dictionary we average over indices in each itemvideo: which video set is this? Default "All" of them
+        people: which person (infant or parent)? Default "Both"
+        armtohandweighting : how much relative contribution do arm points and hand points contribute? 
+        
+        
+    Returns:
+        Average across each row for this subset of columns
+    """
+    
+    if videos == "All": 
+        #include all the videos
+        videos = list(bodydata.columns.levels[0])
+        
+    if people == "Both":
+        #include parent and infant
+        people = list(bodydata.columns.levels[1])
+    
+    if isinstance(armindices, list):
+        #indices is a set of coordinates
+        #so create a dictionary containing them 
+        armindices = {"avg": armindices}
+
+    #list of different averages do take for each person?
+    armidxs =armindices.keys()
+    
+    if isinstance(handindices, list):
+        #indices is a set of coordinates
+        #so create a dictionary containing them 
+        handindices = {"avg": handindices}
+
+    #list of different averages do take for each person?
+    bodyidxs =armindices.keys()
+    handidxs =handindices.keys()
+    
+    col_index = pd.MultiIndex.from_product([videos,people,bodyidxs], names=['video','person','avgs'])
+
+    avgdf = pd.DataFrame(columns=col_index)
+    #average per video per person per subset of indices
+    for vid in videos:
+        for pers in people:
+            for subidx in armindices:
+                #dataframes make averaging nice and easy.
+                #avg by vid by pers by subidx 
+                #weighting formula 
+                #(wt * arm + 1 * hand)/(wt + 1)
+                avgdf[(vid,pers,subidx)] = (armtohandweighting * bodydata[(vid,pers)][armindices[subidx]].mean(axis=1) + handdata[(vid,pers)][handindices[subidx]].mean(axis=1))/(armtohandweighting + 1) 
+    
+        
+    return avgdf
 
 def diffKeypoints(keypoints1,keypoints2,indices):
     """Function to find how far apart one set of points is from another.
@@ -347,7 +414,7 @@ def drawBodyCG(frame, framekeypoints, people):
         diff per index (if any i)
     """
     font = cv2.FONT_HERSHEY_SIMPLEX
-    fontScale = 1.0
+    fontScale = 2
     for p in range(people):
         personkeypoints = framekeypoints[p,:]
         avx = averagePoint(personkeypoints,xs)
@@ -420,7 +487,7 @@ def minimumswaps(deltas):
         swaps.append(rc)
     return swaps    
 
-def sortpeoplebySize(keypoints_array,v,c,maxpeople, start, end):
+def sortpeoplebySize(keypoints_array,v,c,maxpeople, start, end, includeHands = False,rightHand = None, leftHand = None):
     """Openpose isn't consistent in labelling people (person 1 could be labeled pers 2 in next frame).
     However, in many cases the videos are expected to contain an adult and a young child so sorting by size is a sensible thing to try.
     To keep them in the same series we label them so that person with the lowest spread of wireframe nodes has the lowest index.
@@ -458,12 +525,16 @@ def sortpeoplebySize(keypoints_array,v,c,maxpeople, start, end):
                 #print("swap", minkey, minvarkey)
                 #first swap the rest of series between these two 
                 keypoints_array = swapSeries(keypoints_array,v,c,minkey,minvarkey,f,end)
+                if includeHands:
+                    leftHand = swapSeries(leftHand,v,c,minkey,minvarkey,f,end)
+                    rightHand = swapSeries(rightHand,v,c,minkey,minvarkey,f,end)
+                
                 #now swap the keys 
                 vs[minvarkey] = vs[minkey]
             vs.pop(minkey)  #remove the smallest one and loop again
-    return keypoints_array
+    return keypoints_array, leftHand, rightHand
 
-def fixpeopleSeries(keypoints_array,v,c,people, start, end, window = 1):
+def fixpeopleSeries(keypoints_array,v,c,people, start, end, window = 1, includeHands = False,rightHand = None, leftHand = None):
     """Openpose isn't consistent in labelling people (person 1 could be labeled pers 2 in next frame).
     So we go through frame by frame and label people in new frame with index of nearest person from previous frame. This *should* fix things.
     Do do this we take difference in location of coordinates of person 1 in this frame with all people in next frame. Let's say this is Person 4. We swap person 4 and person 1 data in all subsequent frames effectively relabling them. Now do same for person two but only comparing to person 2 upwards in next frame. 
@@ -477,6 +548,7 @@ def fixpeopleSeries(keypoints_array,v,c,people, start, end, window = 1):
         start: where in time series do we start? (TODO if it's blank - start at beginning)
         end: where in time series do we end? (TODO if it's blank - to end)
         window: optional integer, if > 1 we use a rolling window including frame f -1, f-2, etc. 
+        includeHands: - do we need to keep track of the separate hand data?
     Returns:
         a rearranged keypoints_array
     """
@@ -512,7 +584,10 @@ def fixpeopleSeries(keypoints_array,v,c,people, start, end, window = 1):
             if p1 != p2:
                 #swap the rest of series between these two 
                 keypoints_array = swapSeries(keypoints_array,v,c,p1,p2,f+1,end)
-    return keypoints_array
+                if includeHands:
+                    leftHand = swapSeries(leftHand,v,c,p1,p2,f+1,end)
+                    rightHand = swapSeries(rightHand,v,c,p1,p2,f+1,end)
+    return keypoints_array, leftHand, rightHand
 
 def swapCameras(videos, keypoints_array,vidx,cam1,cam2):
     """helper function for swapping secondary camera angle to main camera.

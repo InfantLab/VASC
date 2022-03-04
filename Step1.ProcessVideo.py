@@ -36,6 +36,7 @@ import cv2               #computervision toolkit
 import logging
 import numpy as np
 import pandas as pd
+from pprint import pprint
 from datetime import datetime
 
 #turn on debugging
@@ -51,7 +52,8 @@ logger.setLevel(logging.INFO)
 # `TODO - write a helper to create a settings file`
 
 # +
-settingsjson = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Little Drummers\\VASC\\settings.json"
+#settingsjson = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Little Drummers\\VASC\\settings.json"
+settingsjson = "E:\\little.drummer.20220111\\LD.settings.json"
 
 try:
     with open(settingsjson) as json_file:
@@ -67,7 +69,7 @@ except Exception as e:
 # -
 
 #optional - have a look at our settings to make sure they're what we expect
-print(settings)
+pprint(settings)
 
 # ### 1.2 Where is OpenPose?
 #
@@ -451,7 +453,8 @@ for vid in videos:
 
 # +
 nvideos = len(videos)
-maxcameras = 3
+maxcameras = 1
+#maxcameras = 3
 maxframes = 0
 maxpeople = 15 #maximum people we might expect (large upper bound)
 ncoords = 75 #the length of the array coming back from openpose x,y coords of each point plus cafs
@@ -461,12 +464,14 @@ for vid in videos:
     for cam in videos[vid]:
         #use glob to get all the individual json files.
         videoname = videos[vid][cam]["stemname"]
-        alljson = glob.glob(videos_out_openpose + "\\" + videoname + "*.json")
+        alljson = glob.glob(videos_out_openpose + "\\" + videoname + "_*.json")
         nframes = len(alljson)
         print("Video", vid, cam, "has {0} frames.".format(nframes))
         videos[vid][cam]["frames"] = nframes
         maxframes = max(maxframes,nframes)
 
+# +
+maxpeople = 10 #maximum people we might expect (large upper bound)
 
 keypoints_array = np.zeros([nvideos,maxcameras, maxframes,maxpeople,ncoords]) #big array to hold all the numbers
 
@@ -495,20 +500,20 @@ for vid in videos:
     for cam in videos[vid]:
         c += 1  #index for this camera
         #use glob to get all the individual json files.
-        alljson = glob.glob(videos_out_openpose + "\\" + videos[vid][cam]["stemname"] + "*.json")
-        i = 0
+        alljson = glob.glob(videos_out_openpose + "\\" + videos[vid][cam]["stemname"] + "_*.json")
+        f = 0
         for frame in alljson:
             with open(frame, "r") as read_file:
                 data = json.load(read_file)
-                j = 0
+                pers = 0
                 for p in data["people"]:
-                    keypoints_array[v,c,i,j,:]= p["pose_keypoints_2d"]
+                    keypoints_array[v,c,f,pers,:]= p["pose_keypoints_2d"]
                     if includeHands:
-                        righthand_array[v,c,i,j,:]= p["hand_right_keypoints_2d"]
-                        lefthand_array[v,c,i,j,:] = p["hand_left_keypoints_2d"]
-                    j += 1
-                npeople[i] = j
-                i += 1
+                        righthand_array[v,c,f,pers,:]= p["hand_right_keypoints_2d"]
+                        lefthand_array[v,c,f,pers,:] = p["hand_left_keypoints_2d"]
+                    pers += 1
+                npeople[f] = pers
+                f += 1
         #end loop for this video
         people = int(max(npeople))
         print("Video", vid, cam, "has {0} people detected.".format(people))
@@ -551,9 +556,23 @@ np.savez_compressed(videos_out_timeseries + "\\" + settings["filenames"]["alldat
 if includeHands:
     np.savez_compressed(videos_out_timeseries + '\\' + settings["filenames"]["righthandnpz"], keypoints_array=righthand_array)
     np.savez_compressed(videos_out_timeseries + '\\' + settings["filenames"]["lefthandnpz"],  keypoints_array=lefthand_array)
+    
+
+
+
+
+
+
+
 
 
 # -
+
+#after each new id we save the json data
+settings["lastUpdate"] = datetime.now().isoformat()
+with open(settingsjson, 'w') as outfile:
+    json.dump(settings, outfile)
+    print('settings.json updated')
 
 # #### That's it.
 #

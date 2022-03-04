@@ -42,7 +42,8 @@ import pandas as pd
 import logging
 import ipywidgets as widgets  #let's us add buttons and sliders to this page.
 from ipycanvas import Canvas
-
+from datetime import datetime
+from pprint import pprint
 
 import matplotlib.pyplot as plt
 # %matplotlib inline
@@ -63,7 +64,8 @@ logger.setLevel(logging.INFO)
 #
 
 # +
-settingsjson = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Little Drummers\\VASC\\settings.json"
+#settingsjson = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Little Drummers\\VASC\\settings.json"
+settingsjson = "E:\\little.drummer.20220111\\LD.settings.json"
 
 try:
     with open(settingsjson) as json_file:
@@ -86,6 +88,8 @@ except Exception as e:
 # * `False` - we will *attempt to* draw video images - If videos are not available we fall back to anonymous mode
 
 anon = settings["flags"]["anon"]
+
+# Did we get OpenPose to include wireframes for the hands?
 
 includeHands = settings["flags"]["includeHands"]
 
@@ -136,34 +140,35 @@ for vid in videos:
 #
 # The `cleaned` flag tells us whether to start from original data or from a (partially) cleaned set.
 
-cleaned = settings["flags"]["cleaned"]
+# +
+# uncomment next line to manually set cleaned flag
+settings["flags"]["cleaned"] = False
+
+print("cleaned = {0}".format(settings["flags"]["cleaned"]))
+
 
 # +
-if not cleaned:
+if not settings["flags"]["cleaned"]:
     #can reload the values without recomputing
     reloaded = np.load(videos_out_timeseries +  "\\" + settings["filenames"]["alldatanpz"])
     if includeHands:
-        LH = np.load(videos_out_timeseries +  "\\" + settings["filenames"]["lefthandnpz"])
-        RH = np.load(videos_out_timeseries +  "\\" + settings["filenames"]["righthandnpz"])
+        LH_npz = np.load(videos_out_timeseries +  "\\" + settings["filenames"]["lefthandnpz"])
+        RH_npz = np.load(videos_out_timeseries +  "\\" + settings["filenames"]["righthandnpz"])
 else:
     #or we can load an cleaned/partially cleaned dataset..
     reloaded = np.load(videos_out_timeseries  +  "\\" + settings["filenames"]["cleannpz"])
     if includeHands:
-        LH = np.load(videos_out_timeseries +  "\\" + settings["filenames"]["cleanleftnpz"])
-        RH = np.load(videos_out_timeseries +  "\\" + settings["filenames"]["cleanrightnpz"])
+        LH_npz = np.load(videos_out_timeseries +  "\\" + settings["filenames"]["cleanleftnpz"])
+        RH_npz = np.load(videos_out_timeseries +  "\\" + settings["filenames"]["cleanrightnpz"])
 
-#keypoints_array = np.copy(keypoints_original)  #an array where we clean the data.
-keypoints_original = reloaded["keypoints_array"] #the data before this processing (for interim reseting)
-keypoints_array = np.copy(keypoints_original)  #an array where we clean the data.
+keypoints_array = np.copy(reloaded["keypoints_array"])  #an array where we clean the data.
 
 if includeHands:
-    LH_original = LH["keypoints_array"] #the unprocessed data
-    RH_original = RH["keypoints_array"] #the unprocessed data
-    LH_array = np.copy(LH_original)  #an array where we clean the data.
-    RH_array = np.copy(RH_original)  #an array where we clean the data.
+    LH = np.copy(LH_npz["keypoints_array"])  #an array where we clean the data.
+    RH = np.copy(RH_npz["keypoints_array"])  #an array where we clean the data.
 else:
-    LH_array = None
-    RH_array = None
+    LH = None
+    RH = None
 # -
 
 
@@ -195,13 +200,21 @@ keypoints_array.shape
 # TODO  - We wiil give the user the opportunity to set these.
 #
 
+# +
 #let's loop through the processed list and set and startframe and endframe for each video
 # for the moment we'll just use the full video.
-# TODO - we will let the use specify this per video
+# also might specify which hand to code left or right
+# In step 3 we let the user specify this per video
+
+starttime = 0 
+starttime = 5  #(in seconds)
+
 for vid in videos:
     for cam in videos[vid]:
-        videos[vid][cam]["start"] = 0
+        videos[vid][cam]["side"] = "right"
+        videos[vid][cam]["start"] = int(starttime * videos[vid][cam]["fps"]) #convert time to number of frames
         videos[vid][cam]["end"] = videos[vid][cam]["frames"]
+# -
 
 # ### Step 2.3.2: Tag the actors of interest at start
 #
@@ -229,7 +242,7 @@ for vid in videos:
 #
 # Finally we can delete any people in background or false positives (ghosts) detected by OpenPose. We simply set these to zero.
 
-# ## CONTROL PANEL
+# ## Step 2.4: CLEAN UP CONTROL PANEL
 #
 # Run this BIG block of code to provide controls to edit and reorganise the data.
 # If anything goes wrong you can revert to the original data.
@@ -281,14 +294,14 @@ cambox = widgets.HBox([pickcam, button_swapcam])
 button_swapchild = widgets.Button(description="Swap to child (0)")
 child = widgets.Dropdown(
     options = list(range(10)),
-    value= 0,
+    value= 1,
     description='Set: '
 )
 babybox = widgets.HBox([button_swapchild, child])
 
 adult = widgets.Dropdown(
     options = list(range(10)),
-    value= 1,
+    value= 0,
     description='Set: '
 )
 button_swapadult = widgets.Button(description="Swap to adult (1)")
@@ -350,7 +363,6 @@ plus1pct.on_click(plus1pct_clicked)
 
 adjustbox  = widgets.HBox([minus1pct,minus10,minus1,plus1,plus10,plus1pct])
 
-
 ###############################################################
 ## Action buttons
 ## To redraw everything it's current state, to attempt autofixing or to undo some or all our changes
@@ -386,7 +398,7 @@ def on_button_clicked(output):
 def on_reset_all(output):
     global keypoints_array
     logging.info('button_reset_all clicked')
-    keypoints_array = np.copy(keypoints_original)
+    keypoints_array = np.copy(reloaded["keypoints_array"])
     updateAll(True)
 
 def on_fixlocations(output):
@@ -396,7 +408,7 @@ def on_fixlocations(output):
     c = videos[pickvid.value][pickcam.value]["c"]
     end  = videos[pickvid.value][pickcam.value]["end"]
     window = 10
-    vasc.fixpeopleSeries(keypoints_array,v,c,[0,1],slider.value, end, window)
+    vasc.fixpeopleSeries(keypoints_array,v,c,[0,1],slider.value, end, window, includeHands, LH, RH)
     updateAll(True)
 
 def on_fixsizes(output):
@@ -406,7 +418,7 @@ def on_fixsizes(output):
     c = videos[pickvid.value][pickcam.value]["c"]
     N = videos[vid][cam]["maxpeople"]
     end  = videos[pickvid.value][pickcam.value]["end"]
-    vasc.sortpeoplebySize(keypoints_array,v,c,N,slider.value, end)
+    vasc.sortpeoplebySize(keypoints_array,v,c,N,slider.value, end, includeHands, LH, RH)
     updateAll(True)
 
 def on_deleteparticipant(output):
@@ -418,6 +430,9 @@ def on_deleteparticipant(output):
         c = videos[pickvid.value][cam]["c"]
         end  = videos[pickvid.value][cam]["end"]
         vasc.deleteSeries(keypoints_array,v,c,remove.value,0, end)
+        if includeHands:
+            vasc.deleteSeries(LH,v,c,remove.value,0, end)
+            vasc.deleteSeries(RH,v,c,remove.value,0, end)
     #now remove this from videos object
     if pickvid.value in videos:
         logging.info(pickvid.value)
@@ -436,6 +451,9 @@ def on_deleteseries(output):
     c = videos[pickvid.value][pickcam.value]["c"]
     end  = videos[pickvid.value][pickcam.value]["end"]
     vasc.deleteSeries(keypoints_array,v,c,remove.value,slider.value, end)
+    if includeHands:
+        vasc.deleteSeries(LH,v,c,remove.value,slider.value, end)
+        vasc.deleteSeries(RH,v,c,remove.value,slider.value, end)
     updateAll(True)
 
 def on_swapcam(output):
@@ -454,6 +472,9 @@ def on_swapchild(output):
     c = videos[pickvid.value][pickcam.value]["c"]
     end  = videos[pickvid.value][pickcam.value]["end"]
     vasc.swapSeries(keypoints_array,v,c,0,child.value,slider.value,end)
+    if includeHands:
+        vasc.swapSeries(LH,v,c,0,child.value,slider.value,end)
+        vasc.swapSeries(RH,v,c,0,child.value,slider.value,end)
     updateAll(True)
 
 def on_swapadult(output):
@@ -464,6 +485,9 @@ def on_swapadult(output):
     c = videos[pickvid.value][pickcam.value]["c"]
     end  = int(videos[pickvid.value][pickcam.value]["end"])
     vasc.swapSeries(keypoints_array,v,c,1,adult.value,slider.value,end)
+    if includeHands:
+        vasc.swapSeries(LH,v,c,1,adult.value,slider.value,end)
+        vasc.swapSeries(RH,v,c,1,adult.value,slider.value,end)
     updateAll(True)
 
 
@@ -486,18 +510,19 @@ def drawOneFrame(vid, cam, frameNum):
     # which subarray of data do we need?
     v = videos[vid][cam]["v"]
     c = videos[vid][cam]["c"]
+    #print("drawOneFrame v:{0}, c:{1}".format(v, c))
     if anon == True:
         #draw a black image
         frame = np.zeros((videos[vid][cam]["height"], videos[vid][cam]["width"], 3), dtype = "uint8")
     else:
-        vidpath = videos[pickvid.value][pickcam.value]["fullpath"]
+        vidpath = videos[vid][cam]["fullpath"]
         frame = vasc.getframeimage(vidpath,frameNum)
     vasc.drawPoints(frame,keypoints_array[v,c,frameNum,:,:],videos[vid][cam]["maxpeople"])
     vasc.drawLines(frame,keypoints_array[v,c,frameNum,:,:],videos[vid][cam]["maxpeople"])
     vasc.drawBodyCG(frame,keypoints_array[v,c,frameNum,:,:],videos[vid][cam]["maxpeople"])
     if includeHands:
-        vasc.drawHands(frame,RH_array[v,c,frameNum,:,:],videos[vid][cam]["maxpeople"])
-        vasc.drawHands(frame,LH_array[v,c,frameNum,:,:],videos[vid][cam]["maxpeople"])
+        vasc.drawHands(frame,RH[v,c,frameNum,:,:],videos[vid][cam]["maxpeople"])
+        vasc.drawHands(frame,LH[v,c,frameNum,:,:],videos[vid][cam]["maxpeople"])
     #send the image to the canvas
     img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     hiddencanvas = Canvas(width=img.shape[1], height=img.shape[0])
@@ -511,7 +536,8 @@ def drawMovementGraph(vid, cam, points, frame = 0, average = True):
     N = videos[vid][cam]["frames"]
     t = np.zeros([N,1])
     t[:,0]= list(range(N))
-
+    #print("drawMovementGraph v:{0}, c:{1}".format(v, c))
+    
     #variable to track the centre of gravity for each person
     ceegees = np.zeros([N,videos[vid][cam]["maxpeople"]])
 
@@ -539,16 +565,17 @@ def updateAll(forceUpdate = False):
         slider.value = 0
         slider.max = videos[pickvid.value][pickcam.value]["end"]
     with output:
-        display(canvas,pickvid,cambox, babybox,adultbox,removebox, buttonbox, slider, adjustbox)
         drawOneFrame(pickvid.value,pickcam.value,slider.value)
         drawMovementGraph(pickvid.value,pickcam.value,vasc.xs,slider.value,True)
+        display(canvas,pickvid,cambox, babybox,adultbox,removebox, buttonbox, slider, adjustbox)
+        
 
 #draw everything for first time
 updateAll(True)
 output
 # -
 
-# ### Step 2.4: TODO - Correct for camera motion?
+# ### Step 2.4.1: TODO - Correct for camera motion?
 #
 # Some video sets the camera is not fixed. Any camera movements will cause perfectly correlated movements in the pair of signals. We need to decide what (if anything) to do about this. (Not yet implemented.)
 #
@@ -589,8 +616,21 @@ with open(videos_out + '\\' + settings["filenames"]["clean_json"], 'w') as outfi
 #in a compressed format as it has a lot of empty values
 np.savez_compressed(videos_out_timeseries + '\\' + settings["filenames"]["cleannpz"] , keypoints_array=keypoints_array)
 if includeHands:
-    np.savez_compressed(videos_out_timeseries + '\\' + settings["filenames"]["cleanleftnpz"] , keypoints_array=LH_array)
-    np.savez_compressed(videos_out_timeseries + '\\' + settings["filenames"]["cleanrightnpz"] , keypoints_array=RH_array)
+    np.savez_compressed(videos_out_timeseries + '\\' + settings["filenames"]["cleanleftnpz"] , keypoints_array=LH)
+    np.savez_compressed(videos_out_timeseries + '\\' + settings["filenames"]["cleanrightnpz"] , keypoints_array=RH)
+
+print("Data saved")
+
+
+#make a note in our settings file so that we used cleandata next time
+settings["flags"]["cleaned"] = True
+#after each new id we save the json data
+settings["lastUpdate"] = datetime.now().isoformat()
+with open(settingsjson, 'w') as outfile:
+    json.dump(settings, outfile)
+    print('settings.json updated')
+    
+# -
 
 
 # ## Step 2.8: Save a pandas dataframe version too.
@@ -599,11 +639,11 @@ if includeHands:
 #
 # The rows will have three levels of hierarchy (video x person x BODY25-coordinate). The rows are the individual frames. So a single column will contain the complete time-series of a single dimension of a single point of one person.  So in this example:
 # ```
-# rows 0-411 represent the 412 frames of data.
+#  rows 0-411 represent the 412 frames of data.
 #
-# col 0 is x-coordinate of point 0 (nose) of infant in video 'lookit.01'
-# col 1 is y-coordinate of point 0 (nose) of infant in video 'lookit.01'
-# col 2 is openpose confidence score for how well it identified that point.
+#  col 0 is x-coordinate of point 0 (nose) of infant in video 'lookit.01'
+#  col 1 is y-coordinate of point 0 (nose) of infant in video 'lookit.01'
+#  col 2 is openpose confidence score for how well it identified that point.
 # ```
 #
 # <img src="multiindexdataframe.png" alt="multiindex" width="871"/>
@@ -617,19 +657,22 @@ keypoints_array = reloaded["keypoints_array"] #the unprocessed data
 keypoints_array.shape
 
 #TODO reload hands
+# -
+
+keypoints_array.shape
 
 # +
 #delete all cameras except 0
-keypoints_array = np.delete(keypoints_array,np.s_[1:],1)
+#keypoints_array = np.delete(keypoints_array,np.s_[1:],1)
 #delete all people except 0 & 1
 keypoints_array = np.delete(keypoints_array,np.s_[2:],3)
 
 if includeHands:
     #Same for LH & RH
-    LH_array = np.delete(LH_array,np.s_[1:],1)
-    LH_array = np.delete(LH_array,np.s_[2:],3)
-    RH_array = np.delete(RH_array,np.s_[1:],1)
-    RH_array = np.delete(RH_array,np.s_[2:],3)
+    LH = np.delete(LH,np.s_[1:],1)
+    LH = np.delete(LH,np.s_[2:],3)
+    RH = np.delete(RH,np.s_[1:],1)
+    RH = np.delete(RH,np.s_[2:],3)
 # -
 
 
@@ -668,6 +711,8 @@ col_index = pd.MultiIndex.from_product([toplevel,participants,coords], names=col
 
 cleandf = pd.DataFrame(columns=col_index, index = timeseries)
 #cleandf.head()
+
+
 # -
 
 # Then populate the dataframe row by row.
@@ -694,8 +739,8 @@ if includeHands:
             v = videos[vid]["camera1"]["v"]
             part = participants[p]
             for r in range(3*vasc.handPoints):
-                cleanLH[(vid, part, r)] = LH_array[v,0,:,p,r]
-                cleanRH[(vid, part, r)] = RH_array[v,0,:,p,r]
+                cleanLH[(vid, part, r)] = LH[v,0,:,p,r]
+                cleanRH[(vid, part, r)] = RH[v,0,:,p,r]
     cleanLH = cleanLH.sort_index(axis = 1)
     cleanRH = cleanRH.sort_index(axis = 1)
 
@@ -703,6 +748,8 @@ if includeHands:
 #
 # We use the fast `parquet` format with library `pyarrow` in order to preserve our hierarchical index in a compressed format. We save into the timeseries sub-folder.
 #
+
+settings["flags"]["cleaned"] = True
 
 import pyarrow.parquet as pq
 import pyarrow as pa
@@ -718,7 +765,26 @@ if includeHands:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 # -
+
+#after each new id we save the json data
+updateTime = datetime.now()
+settings["lastUpdate"] = updateTime.isoformat()
+with open(settingsjson, 'w') as outfile:
+    json.dump(settings, outfile)
+    print('settings.json updated')
+
 
 #Optional check
 print('reading parquet file:')
