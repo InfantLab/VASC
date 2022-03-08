@@ -11,7 +11,8 @@ This repository provides Python code and annotated Jupyter notebooks to perform 
 * Step 0: Getting started with this project. What to install (besides these files).
 * Step 1: Process a video (or videos) with OpenPose, creating JSON file per frame with wireframe data for all identified persons ('actors'). Extract video by video, frame by frame data from JSON files and combine into a single numpy array.
 * Step 2: Load nparray from step 1 & perform basic validations (identifying individuals over time, tagging windows of interest, handle missing data).
-* Step 3: Calculated cross-correlations, Granger Causality (and other measures) between actors in dataset. 
+* Step 3: Perform fourier analysis to extract rythmic movements and compare across groups. 
+* Step 4: Calculate cross-correlations, Granger Causality (and other measures) between multiple actors in same video. 
 
 ## Installation
 
