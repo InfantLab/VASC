@@ -1,0 +1,32 @@
+{
+    "batchName": "Little Drummer test set with hand data",
+	"lastUpdate": null,
+	"flags":{
+		"anon": false,
+		"includeHands": true,
+		"cleaned": false
+		},
+	"paths":{
+		"openpose":"C:\\Users\\cas\\openpose-1.7.0-binaries-win64-gpu-python3.7-flir-3d_recommended\\",
+		"project": "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Little Drummers\\",
+		"videos_in": "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Little Drummers\\test",
+		"videos_out": "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Little Drummers\\testhandsout", 
+		"videos_out_openpose": "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Little Drummers\\testhandsout\\openpose",
+		"videos_out_timeseries": "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Little Drummers\\testhandsout\\timeseries",
+		"videos_out_analyses" : "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Little Drummers\\testhandsout\\analyses"
+	},
+	"filenames":{
+		"videos_json": "videos.json",
+		"clean_json": "clean.json",
+		"alldatanpz": "allframedata.npz",
+		"lefthandnpz": "lefthandframedata.npz",
+		"righthandnpz": "righthandframedata.npz",
+		"lefthandnpz": "lefthandframedata.npz",
+		"cleannpz": "cleandata.npz",
+		"cleanrightnpz": "cleanrightdata.npz",
+		"cleanleftnpz": "cleanleftdata.npz",
+		"cleandataparquet": "cleandata.parquet",
+		"righthandparquet": "righthand.parquet",
+		"lefthandparquet": "lefthand.parquet"
+	}
+}
