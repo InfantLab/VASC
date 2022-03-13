@@ -9,7 +9,7 @@ import pandas as pd
 # OpenPose has two main body models COCO with 18 points and BODY-25 with 25.
 # The default (and better model) is BODY-25. Here we provide the labelling for
 # all the points and their relationships to enable us to redraw the wireframes.
-#info founnd in https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp
+# info founnd in https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp
 
 
 # what body part is that?
@@ -54,6 +54,7 @@ POSE_PAIRS = [[ 1, 8], [ 1, 2], [ 1, 5], [ 2, 3], [ 3, 4], [ 5, 6], [ 6, 7],
               # [ 2,17], [ 5,18]
 nPairs = len(POSE_PAIRS)
 
+
 #What color shall we paint each point.
 pointcolors =  [[255,     0,    85],
                 [255,     0,     0],
@@ -94,6 +95,9 @@ def xyc (coords):
     cs = [x + 2 for x in xs]
     return xs,ys,cs
 
+# ######## BODY ###########
+
+#now we label sets of points for body
 nPoints =25
 xs, ys, cs = xyc(list(range(nPoints)))
 xys = xs + ys
@@ -105,15 +109,36 @@ headx, heady, headc = xyc(head)
 headxys = headx + heady
 headxys.sort()  # sort for clarity
 
+rightarm = [2,3 ,4]
+rightarmx, rightarmy, rightarmc = xyc(rightarm)
+rightarmxys = rightarmx + rightarmy
+rightarmxys.sort()  # sort for clarity
+
+leftarm = [5, 6, 7]
+leftarmx, leftarmy, leftarmc = xyc(leftarm)
+leftarmxys = leftarmx + leftarmy
+leftarmxys.sort()  # sort for clarity
+
 arms =  [2, 3, 4, 5, 6, 7]
 armsx, armsy, armsc = xyc(arms)
 armsxys = armsx + armsy
 armsxys.sort()
 
+
 legs = [22, 23, 24, 11, 10, 9, 8, 12, 13, 14, 19, 20 ,21]
 legsx, legsy, legsc = xyc(legs)
 legsxys = legsx + legsy
 legsxys.sort()
+
+# ######## HANDS ###########
+
+#now we label sets of points for hands
+handPoints =21
+hxs, hys, hcs = xyc(list(range(handPoints)))
+hxys = hxs + hys
+hxys.sort() # sort for clarity
+
+
 
 def video_to_frames(input_loc, output_loc):
     """Function to extract frames from input video file
@@ -206,7 +231,7 @@ def varKeypoint(keypointList,indices):
     else:
         return np.inf  # or None?
 
-    
+
 def averageCoordinateTimeSeries(df,indices,videos = "All", people = "Both"):
     """Function to find the average of a set of coordinates from the person location time series.
     This helps track their centre of mass or the movements of the head, etc. 
@@ -294,6 +319,14 @@ def drawPoints(frame, framekeypoints, people):
             if sum(coords) > 0:
                 cv2.circle(frame,coords, 2, pointcolors[i], -1, cv2.LINE_AA)
 
+def drawHands(frame, framekeypoints, people):
+    for p in range(people):
+        personkeypoints = framekeypoints[p,:]
+        for i in range(handPoints):
+            coords = getkeypointcoord(personkeypoints,i)
+            if sum(coords) > 0:
+                cv2.circle(frame,coords, 2, pointcolors[i], -1, cv2.LINE_AA)
+
 def drawLines(frame, framekeypoints, people):
     for p in range(people):
         personkeypoints = framekeypoints[p,:]
@@ -345,7 +378,7 @@ def swapSeries(keypoints_array,v,c,pers1,pers2,start,end):
     keypoints_array[v,c,start:end,pers2,:] = temp
     
     return keypoints_array
-        
+
 def deleteSeries(keypoints_array,v,c,pers,start,end):
     """helper function for deleting time series that aren't parent or child.
     Args:
@@ -362,11 +395,11 @@ def deleteSeries(keypoints_array,v,c,pers,start,end):
     keypoints_array[v,c,start:end,pers,:] = 0
     #TODO - update the corresponding json file.
     return keypoints_array
-    
+
 
 
 def minimumswaps(deltas):
-    """For 2x2 np.array of distances we want to 'diagonalise the minimums'. That is to say we want
+    """For NxN np.array of distances between people we want to 'diagonalise the minimums'. That is to say we want
     to find the smallest single entry and remove the row and column containing that then repeat the process. 
     The use case is for when openpose mislabels skeletons from one frame to the next. We take a matrix of 
     distances between the centroids and map each to its nearest from frame f to frame f+1 so we can swap them. 
@@ -441,8 +474,8 @@ def fixpeopleSeries(keypoints_array,v,c,people, start, end, window = 1):
         v: integer, which video? - specifies first dimension of array
         c: integer, which camera? - specifies second dimension of array
         people: list of indices of people we are comparing. 
-        start: where in time series do we start? (TODO can be blank - start at beginning)
-        end: where in time series do we end? (TODO can be blank - to end)
+        start: where in time series do we start? (TODO if it's blank - start at beginning)
+        end: where in time series do we end? (TODO if it's blank - to end)
         window: optional integer, if > 1 we use a rolling window including frame f -1, f-2, etc. 
     Returns:
         a rearranged keypoints_array
@@ -480,7 +513,7 @@ def fixpeopleSeries(keypoints_array,v,c,people, start, end, window = 1):
                 #swap the rest of series between these two 
                 keypoints_array = swapSeries(keypoints_array,v,c,p1,p2,f+1,end)
     return keypoints_array
-                
+
 def swapCameras(videos, keypoints_array,vidx,cam1,cam2):
     """helper function for swapping secondary camera angle to main camera.
     Usually this means to 'camera1' but we make the routine more general. 

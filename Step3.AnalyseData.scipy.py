@@ -8,7 +8,7 @@
 #       format_version: '1.5'
 #       jupytext_version: 1.7.1
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -47,20 +47,56 @@ import vasc #a module of our own functions (found in vasc.py in this folder)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 # %pdb on
+# -
+
+# ## 2.1 Settings?
+#
+# Load a json file that tells us where to find our videos and where to save the data. You should create a different settings file for each project. Then you don't need to change any other values in the script for Step 1 or Step 2.
+#
+# TODO - write a helper to create a settings file
+#
 
 # +
-jupwd =  os.getcwd() + "\\"
-# where's the project data folder? 
-projectpath = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Measuring Responsive Caregiving\\VASCTutorial"
-#where are your video files? 
-videos_in = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Measuring Responsive Caregiving\\VASCTutorial\\demovideos"
+settingsjson = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Little Drummers\\VASC\\settings.json"
 
+try:
+    with open(settingsjson) as json_file:
+        settings = json.load(json_file)
+        print("Existing settings.json found..")
+except json.JSONDecodeError:
+    logging.exception("Settings file was not valid JSON.")
+except Exception as e:
+        emsg = str(e)
+        #show the error
+        print("Error: ",emsg)
+        print("No setting.json file found!\nPlease see Step 0 for instructions")
+# -
+
+includeHands = settings["flags"]["includeHands"]
+
+anon = settings["flags"]["anon"]
+
+
+
+
+
+# +
+# where's the project data folder? (with trailing slash)
+projectpath = settings["paths"]["project"]
+#where are your video files? 
+videos_in = settings["paths"]["videos_in"]
 
 # locations of videos and output
-videos_out   = projectpath + "\\out"
-videos_out_openpose   = videos_out + "\\openpose"
-videos_out_timeseries = videos_out + "\\timeseries"
-videos_out_analyses   = videos_out + "\\analyses"
+videos_out = settings["paths"]["videos_out"]
+videos_out_openpose   = settings["paths"]["videos_out_openpose"]
+videos_out_timeseries = settings["paths"]["videos_out_timeseries"]
+videos_out_analyses   = settings["paths"]["videos_out_analyses"]
+
+print(videos_in)
+print(videos_out)
+print(videos_out_openpose)
+print(videos_out_timeseries)
+print(videos_out_analyses)
 # -
 
 # ### 3.1 Load the clean data as a DataFrame
@@ -68,16 +104,21 @@ videos_out_analyses   = videos_out + "\\analyses"
 # Reload the clean data file created in step 2. 
 
 #retrieve the list of base names of processed videos.
+videosjson = settings["paths"]["videos_out"] + '\\' + settings["filenames"]["clean_json"]
 try:
-    with open(videos_out + '\\clean.json') as json_file:
+    with open(videosjson) as json_file:
         videos = json.load(json_file)
         print("Existing clean.json found..")
 except:
-    print("File clean.json not found.")
+    videos = {}
+    print("No clean.json file found, please locate the file or complete Step 2 first.")
 
 # +
 print('reading parquet file:')
-df = pq.read_table(videos_out_timeseries + '\\cleandata.parquet').to_pandas()
+df = pq.read_table(videos_out_timeseries + '\\' + settings["filenames"]["cleandataparquet"]).to_pandas()
+if includeHands:
+    lh = pq.read_table(videos_out_timeseries + '\\' + settings["filenames"]["lefthandparquet"]).to_pandas()
+    rh = pq.read_table(videos_out_timeseries + '\\' + settings["filenames"]["righthandparquet"]).to_pandas()
 
 #sort the column names as this helps with indexing
 df = df.sort_index(axis = 1)
@@ -89,21 +130,40 @@ print(df.head())
 # Next we set all 0 values to as missing value `np.nan` to enable interpolation.
 # Then use numpy's built in `interpolate` method. 
 
-# +
 df = df.replace(0.0, np.nan)
+if includeHands:
+    rh = rh.replace(0.0, np.nan)
+    lh = lh.replace(0.0, np.nan)
 
+df.shape
+
+# +
 #are we going to use all the data or a subset?
 first = 0
-last = 8500
+last = 2989 
 
 df = df.truncate(before  = first, after = last)
-# -
 
-df = df.interpolate()
+# +
+#linear interpolate missing values 
+df = df.interpolate()  
+#may still have some NaNs at start so back fill these with first non-zero value
+#eg  [NaN, NaN, 3.1, 3.2, ...] -> [3.1, 3.1, 3.1, 3.2, ...]
+df = df.fillna(method = 'backfill')
+
+if includeHands:
+    rh = rh.interpolate()  
+    rh = rh.fillna(method = 'backfill')
+    lh = lh.interpolate() 
+    lh = lh.fillna(method = 'backfill')
+
+# -
 
 #take a quick look
 print(df.head())
 df.shape
+
+print(lh.head())
 
 # ### 3.2.1 Mean movements
 # We create a dictionary of the subsets of OpenPose coordinates we want to average and then call `mean` on the Pandas dataframe. e.g.
@@ -146,43 +206,65 @@ meanpoints = {"head" : vasc.headxys,
               "arms" : vasc.armsxys,
               "armsx": vasc.armsx,
               "armsy": vasc.armsy,
+              "leftarm" : vasc.leftarmxys,
+              "leftarmx": vasc.leftarmx,
+              "leftarmy": vasc.leftarmy,
+              "rightarm" : vasc.rightarmxys,
+              "rightarmx": vasc.rightarmx,
+              "rightarmy": vasc.rightarmy,
               "all"  : vasc.xys,
               "allx" : vasc.xs,
-              "ally" : vasc.ys}
+              "ally" : vasc.ys
+             }
 
 vids = "All"
 people = ["infant","parent"]
 
 #average across the points in each group (all points of head etc. )
 avgdf = vasc.averageCoordinateTimeSeries(df,meanpoints,vids,people)
+
+hps = {"hand" : vasc.hxys,
+       "handx" : vasc.hxs,
+       "handy" : vasc.hys}
+
+avglh = vasc.averageCoordinateTimeSeries(lh,hps,vids,people)
+avgrh = vasc.averageCoordinateTimeSeries(rh,hps,vids,people)
+
 # -
 
+hps
+
 avgdf.head
+
+# %pdb on
+
 
 # ### 3.2.2 Rolling window of movements
 #
 # One thing we'd like to know is if mothers move in response to infants. The raw time series are probably too noisy to tell us this so instead we can look at few alternatives
 #
 # 1. **Smoothed** - if we average the signal over a short rolling window we smooth out any high-frequency jitter. 
-# 2. **Variance** - the variance of movement over a short rolling window. First we apply 2 second long (50 frame) rolling window to each coordinate of the body and use the stddev or variance function `std()` or `var()` . Then we take averages as in the step above. However, this time we combine x and y coordinates as this is now a movement index.
+# 2. **Variance** - the variance of movement over a short rolling window. First we apply short (10 frame) rolling window to each coordinate of the body and use the stddev or variance function `std()` or `var()` . Then we take averages as in the step above. However, this time we combine x and y coordinates as this is now a movement index. 
 #
 #
 #
 
 # +
-win = 50 #2 seconds
+win = 10 #10 frames better for rhythm detcion
 halfwin = math.floor(win/2)
 
 smoothdf = df.rolling(window = 5).mean()
 smoothdf = smoothdf.truncate(before  = first, after = last)
 
 vardf = df.rolling(window = win, min_periods = halfwin).var()
-vardf = vardf.truncate(before  = first + 50, after = last) # cut out the empty bits at the start
+vardf = vardf.truncate(before  = first , after = last) # cut out the empty bits at the start
  
 smoothdf = vasc.averageCoordinateTimeSeries(smoothdf,meanpoints,vids,people)
 vardf = vasc.averageCoordinateTimeSeries(vardf,meanpoints,vids,people)
 # -
 
+# ## Visualising the data
+#
 # Let's create a widget to plot some graphs of the data
 
 # +
@@ -290,21 +372,22 @@ def updateAll(forceUpdate = False):
 updateAll(True)
 output
 # -
-# ### 3.3 Movement analysis
+# ### 3.3 Fitting the best periodic function.
 #
-# First we run some simple correlations between the mother and infant.
+# For each infant and each trial we try to find the best
 
-infant = vardf[(vid, people[0], 'head')].to_frame()
-infant.head
-print(type(infant))
+# +
+vid = "424a7d7_04-test-trials"
 
-#vid = "SS003"
-vardf[(vid, people[0], 'head')].corr(vardf[(vid, people[1], 'head')]) 
+armmov = avgdf[(vid, people[0], 'leftarm')].to_frame()
+armmov.head
+
+# -
+
 
 who = ["infant","parent"]
 parts = ["head","arms","all"]
-results = pd.DataFrame(columns = ("corrHead","lagHead","corrArms","lagArms","corrAll","lagAll","DyadSynScore"),
-                      index = videos)
+
 
 #loop through colculate for each pair
 for vid in videos:
@@ -319,8 +402,480 @@ for vid in videos:
     thisrow.append(None) #don't have DyadSynScore yet 
     results.loc[vid] = thisrow
 
-#take a quick look
-results
+# ## Fitting the best periodic function
+#
+# We use the scipy [least squares optimiser](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html#scipy.optimize.curve_fit) to find the best fitting sine wave, estimating phase, frequency and amplitude.
+#
+# Because each video could have a different frame rate (fps) we have to make a note of that each time.
+#
+# This page provides a quick example
+# https://scipy-lectures.org/intro/scipy/auto_examples/plot_curve_fit.html
+
+# +
+import time
+import scipy
+import numpy as np
+from scipy import optimize
+import pylab as plt
+
+
+#the function that we want to fit to our data. 
+#basically a sine wave where we optimize everything - especially frequency.
+def optimize_func(x_time, amp, freq, phase, mean):
+    return amp * np.sin(2 * math.pi * freq * x_time + phase) + mean
+# +
+plotgraphs = True
+showfirstguess = False
+savedata = True
+GuessSMT  = 450  #we expect infants to have a spontaneous ISI of 450 ms
+GuessFreq = 1000 / GuessSMT
+
+bodypart = 'leftarmy'
+
+failarray = [math.nan, math.nan, math.nan, math.nan,math.nan]  #empty array if we fail to fit function
+
+
+results = pd.DataFrame(columns = ("fit measure", "best_amp","best_freq","best_phase","best_mean","fps","fitted_isi","message"), index = videos)
+
+for vid in videos:
+    #retrieve the raw data for this video
+    frames = videos[vid]['camera1']['frames']    #how many frames?
+    fps = videos[vid]['camera1']['fps']          #how many frames per second?
+    x_data = np.linspace(0,frames,frames+1)      #x axis
+    x_time = x_data / fps                        #x axis in units of time (seconds)
+    armmov = avgdf[(vid, people[0], bodypart)]  #get the averaged data
+    y_data = armmov.truncate(before = 0, after = frames).to_numpy()  #convert to numpy array
+    
+    try:
+        #have a first guess of the parameters
+        guess_mean = float(np.mean(armmov))
+        guess_amp =  2* float(np.std(armmov))
+        guess_phase = 0.0
+        guess_freq = GuessFreq
+        
+        # we'll use this to plot our first estimate. This might already be good enough for you
+        data_first_guess = optimize_func(x_time, guess_amp, guess_freq, guess_phase, guess_mean)
+
+        #now optimize
+        params, params_covariance = optimize.curve_fit(optimize_func, x_time, y_data,
+                                                   p0=[guess_amp, guess_freq,guess_phase,guess_mean])
+
+        #what is the best fit?
+        fitted = optimize_func(x_time, params[0],params[1],params[2],params[3])
+
+        #how far is this from raw data?
+        best_fit = scipy.spatial.distance.euclidean(y_data,fitted )
+
+        if savedata:
+            #save all values to dataframe
+            vals = [best_fit] 
+            vals.extend(params)
+            vals.append(fps)
+            vals.append(1000/(params[1]))  #fitted isi
+            vals.append("Success")
+            print(vals)
+            results.loc[vid] = vals
+
+        if plotgraphs:
+            #plot the functions
+            plt.figure(figsize=(6, 4),)
+            plt.plot(x_time, y_data, label='Data')
+            if showfirstguess: 
+                plt.plot(x_time, data_first_guess, label = 'First guess')
+            plt.plot(x_time, fitted,label='Fitted function')
+            plt.title(vid + " " + bodypart)
+            plt.legend(loc='best')
+
+            plt.show()
+
+    except Exception as e:
+        #emsg = "".join(str(e)) #error message string hack :(
+        emsg = str(e)
+        #show the error
+        print(vid, " Error: ",emsg)
+        if savedata:
+            #record error in our results array
+            vals = failarray.copy()
+            vals.append(fps)
+            vals.append(math.nan)
+            vals.append(emsg)
+            print(vals)
+            results.loc[vid] = vals
+
+ 
+              
+              
+# -
+#save the fitted parameters.
+results.to_excel("Test.LeftArm.FreeFit.xlsx")
+
+# ## Fitting sine waves with fixed frequencies
+#
+# The next thing we try is to try fitting a sine wave with the expected frequency for that trial. We have two conditions A & B.
+#
+# ```
+#                       Condition A      Condition B
+# xxxx_04-test-trials      Spontaneous Motor Tempo
+# xxxx_06-test-trials      700ms ISI     400ms ISI
+# xxxx_08-test-trials      500ms ISI     600ms ISI
+# xxxx_10-test-trials      600ms ISI     500ms ISI
+# xxxx_12-test-trials      400ms ISI     700ms ISI
+# xxxx_14-test-trials      Spontaneous Motor Tempo
+# ```
+#
+# Therefore, for a given trial type we test the two possible fixed frequency/ISI values to see which fits best. 
+# We do not include the Spontaneous Motor Tempo trials in this analysis.
+
+# +
+
+plotgraphs = True
+showfirstguess = False
+savedata = True
+GuessSMT  = 450  #we expect infants to have a spontaneous ISI of 450 ms
+GuessFreq = 1000/GuessSMT
+
+bodypart = 'rightarmy'
+
+failarray = [math.nan, math.nan, math.nan, math.nan,math.nan]  #empty array if we fail to fit function
+
+
+def optimize_ISI(fixeddata, amp, phase, mean):
+#we need function that we want to fit to our data. 
+#basically a sine wave where we optimize everything - especially frequency.
+#this is slightly complex because each video could have differnt fps.
+#so the fixed data is now x_data, fps, ISI
+#we optimise on phase, amp & mean
+    isi = fixeddata["isi"]
+    freq = 1000 / (isi)
+    x_time = fixeddata["x_time"]
+    return amp * np.sin(twopi * freq * x_time + phase) + mean
+
+
+results = pd.DataFrame(columns = ("fit value","best_freq","best_amp","best_phase","best_mean","isi","fps", "message"))
+
+for vid in videos:
+    #retrieve the raw data for this video
+    frames = videos[vid]['camera1']['frames']    #how many frames?
+    fps = videos[vid]['camera1']['fps']          #how many frames per second?
+    x_data = np.linspace(0,frames,frames+1)      #x axis
+    x_time = x_data / fps                        #x axis in units of time (seconds)
+    fixeddata = {}
+    fixeddata["fps"] = fps 
+    fixeddata["x_time"] = x_time
+    armmov = avgdf[(vid, people[0], bodypart)]  #get the averaged data
+    y_data = armmov.truncate(before = 0, after = frames).to_numpy()  #convert to numpy array
+    
+    #WHat ISI
+    isi = [450, 450]
+    if '_06-' in vid:
+        isi[0] = 700
+        isi[1] = 400
+    elif '_08-' in vid:
+        isi[0] = 500
+        isi[1] = 600
+    elif '_10-' in vid:
+        isi[0] = 600
+        isi[1] = 500
+    elif '_12-' in vid:
+        isi[0] = 400
+        isi[1] = 700
+    else:
+        isi[0] = 450
+        isi[1] = 450
+        
+    for iisi in isi:
+        try:
+            #have a first guess of the parameters
+            guess_mean = float(np.mean(armmov))
+            guess_amp =  2* float(np.std(armmov))
+            guess_phase = 0.0
+            guess_freq = 1000 / iisi  # freq in Hz 
+            
+            fixeddata["isi"] = iisi
+
+            # we'll use this to plot our first estimate. This might already be good enough for you
+            data_first_guess = optimize_ISI(fixeddata, guess_amp, guess_phase, guess_mean)
+
+            #now optimize
+            params, params_covariance = optimize.curve_fit(optimize_ISI, fixeddata, y_data,
+                                                       p0=[guess_amp,guess_phase,guess_mean])
+
+            #what is the best fit?
+            fitted = optimize_ISI(fixeddata, params[0],params[1],params[2])
+
+            #how far is this from raw data?
+            best_fit = scipy.spatial.distance.euclidean(y_data,fitted )
+
+            if savedata:
+                #save all values to dataframe
+                vals = [best_fit]
+                vals.append(guess_freq)
+                vals.extend(params)
+                vals.append(iisi)
+                vals.append(fps)
+                vals.append("Success")
+                print(vals)
+                results.loc[vid+ "-" + str(iisi)] = vals
+
+            if plotgraphs:
+                #plot the functions
+                plt.figure(figsize=(6, 4),)
+                plt.plot(x_time, y_data, label='Data')
+                plt.plot(x_time, fitted,label='Fitted function')
+                if showfirstguess: 
+                    plt.plot(x_time, data_first_guess, label = 'First guess')
+                plt.title(vid + " " + str(iisi) + "ms " + bodypart )
+                plt.legend(loc='best')
+
+                plt.show()
+
+        except Exception as e:
+            #emsg = "".join(str(e)) #error message string hack :(
+            emsg = str(e)
+            #show the error
+            print(vid, " Error: ",emsg)
+            if savedata:
+                #record error in our results array
+                vals = failarray.copy()
+                vals.append(iisi)
+                vals.append(fps)
+                vals.append(emsg)
+                print(vals)
+                results.loc[vid+ "-" + str(iisi)] = vals
+
+
+ 
+# -
+#save the fitted parameters.
+results.to_excel("RightArm.FixedFit.xlsx")
+
+
+
+# ## 3.4 Finding fundamental frequency with FFT
+#
+#
+# A good guide can be found here https://realpython.com/python-scipy-fft/
+
+# +
+import scipy.fft
+
+plotgraphs = True
+showfirstguess = False
+savedata = True
+GuessSMT  = 450  #we expect infants to have a spontaneous ISI of 450 ms
+GuessFreq = 1000/GuessSMT
+
+bodypart = 'rightarmy'
+
+failarray = [math.nan, math.nan, math.nan, math.nan,math.nan]  #empty array if we fail to fit function
+
+results = pd.DataFrame(columns = ("peak", "400","500","600","700","fps","message"), index = videos)
+
+halfbinwidth = 4
+targetFreqs = [1000/400, 1000/500, 1000/600, 1000/700]
+freqResults =pd.DataFrame(columns = ("ISI400","ISI500","ISI600","ISI700"))
+
+
+for vid in videos:
+    #retrieve the raw data for this video
+    frames = videos[vid]['camera1']['frames']    #how many frames?
+    fps = videos[vid]['camera1']['fps']          #how many frames per second?
+    x_data = np.linspace(0,frames,frames+1)      #x axis
+    x_time = x_data / fps                        #x axis in units of time (seconds)
+    armmov = avgdf[(vid, people[0], bodypart)]  #get the averaged data
+    y_data = armmov.truncate(before = 0, after = frames).to_numpy()  #convert to numpy array
+    
+    #we are just interested in the periodic elements (not absolute value above zero) so substract the mean
+    y_normed = np.subtract(y_data,np.average(y_data))
+    
+    try:  
+        yf = scipy.fft.rfft(y_normed)
+        power = np.abs(yf)**2
+        xf = scipy.fft.rfftfreq(x_data.size, 1 / fps)
+
+        #let's find the maximum frequency. 
+        #we hope this is infant's repetitive movement
+        mY = np.abs(power) # Find magnitude
+        peakY = np.max(mY) # Find max peak
+        locY = np.argmax(mY) # Find its location
+        frqY = xf[locY] # Get the actual frequency value
+        print(frqY)
+        
+        #let's find the power in a given frequency bucket corresponding to target freq
+        powers = [0,0,0,0]
+        for p in range(4):
+            #find the nearest value in our list to
+            bucket = np.argmax(xf>targetFreqs[p])
+            powers[p] = sum(mY[bucket-halfbinwidth:bucket+halfbinwidth])
+
+        print("powers")
+        print(powers)
+        
+        if plotgraphs:
+            plt.figure(figsize=(12, 4),)
+            plt.subplot(1,2,1)
+            plt.plot(xf, power)
+ 
+            # New - Plot the max point
+            plt.plot(frqY, peakY, 'b.', markersize=18)
+            # Rest of the code is the same
+            plt.xlabel('Freq (Hz)')
+            plt.ylabel('Power')
+            plt.xlim(right=5)
+            #make title reflecting peak information
+            plt.title(vid + " " + bodypart + 'Peak value: %f, Location: %f Hz' % (peakY, frqY))
+
+            plt.subplot(1,2,2)
+            plt.plot(x_time, y_normed)
+            plt.xlabel('Time (s)')
+            plt.ylabel('Vertical movement')
+            plt.show()
+
+
+        if savedata:
+            #save all values to dataframe
+            vals = [locY] 
+            vals.extend(powers)
+            vals.append(fps)
+            vals.append("Success")
+            print(vals)
+            results.loc[vid] = vals
+
+
+    except Exception as e:
+        #emsg = "".join(str(e)) #error message string hack :(
+        emsg = str(e)
+        #show the error
+        print(vid, " Error: ",emsg)
+        if savedata:
+            #record error in our results array
+            vals = failarray.copy()
+            vals.append(fps)
+            vals.append(emsg)
+            print(vals)
+            results.loc[vid] = vals
+
+
+# +
+import scipy.fft
+
+plotgraphs = True
+showfirstguess = False
+savedata = True
+GuessSMT  = 450  #we expect infants to have a spontaneous ISI of 450 ms
+GuessFreq = 1000/GuessSMT
+
+bodypart = 'handy'
+
+failarray = [math.nan, math.nan, math.nan, math.nan,math.nan]  #empty array if we fail to fit function
+
+results = pd.DataFrame(columns = ("peak", "400","500","600","700","fps","message"), index = videos)
+
+halfbinwidth = 4
+targetFreqs = [1000/400, 1000/500, 1000/600, 1000/700]
+freqResults =pd.DataFrame(columns = ("ISI400","ISI500","ISI600","ISI700"))
+
+
+for vid in videos:
+    #retrieve the raw data for this video
+    frames = videos[vid]['camera1']['frames']    #how many frames?
+    fps = videos[vid]['camera1']['fps']          #how many frames per second?
+    x_data = np.linspace(0,frames,frames+1)      #x axis
+    x_time = x_data / fps                        #x axis in units of time (seconds)
+    armmov = avgrh[(vid, people[0], bodypart)]  #get the averaged data
+    y_data = armmov.truncate(before = 0, after = frames).to_numpy()  #convert to numpy array
+    
+    #we are just interested in the periodic elements (not absolute value above zero) so substract the mean
+    y_normed = np.subtract(y_data,np.average(y_data))
+    
+    try:  
+        yf = scipy.fft.rfft(y_normed)
+        power = np.abs(yf)**2
+        xf = scipy.fft.rfftfreq(x_data.size, 1 / fps)
+        
+        #cutoff at the lower end as these frequencies are not relevant
+        power[0:10] = 0
+
+        #let's find the maximum frequency. 
+        #we hope this is infant's repetitive movement
+        mY = np.abs(power) # Find magnitude
+        peakY = np.max(mY) # Find max peak
+        locY = np.argmax(mY) # Find its location
+        frqY = xf[locY] # Get the actual frequency value
+        print(frqY)
+        
+        #let's find the power in a given frequency bucket corresponding to target freq
+        powers = [0,0,0,0]
+        for p in range(4):
+            #find the nearest value in our list to
+            bucket = np.argmax(xf>targetFreqs[p])
+            powers[p] = sum(mY[bucket-halfbinwidth:bucket+halfbinwidth])
+
+        print("powers")
+        print(powers)
+        
+        if plotgraphs:
+            plt.figure(figsize=(12, 4),)
+            plt.subplot(1,2,1)
+            plt.plot(xf, power)
+ 
+            # New - Plot the max point
+            plt.plot(frqY, peakY, 'b.', markersize=18)
+            # Rest of the code is the same
+            plt.xlabel('Freq (Hz)')
+            plt.ylabel('Power')
+            plt.xlim(right=5)
+            #make title reflecting peak information
+            plt.title(vid + " " + bodypart + 'Peak value: %f, Location: %f Hz' % (peakY, frqY))
+
+            plt.subplot(1,2,2)
+            plt.plot(x_time, y_normed)
+            plt.xlabel('Time (s)')
+            plt.ylabel('Vertical movement')
+            plt.show()
+
+
+        if savedata:
+            #save all values to dataframe
+            vals = [locY] 
+            vals.extend(powers)
+            vals.append(fps)
+            vals.append("Success")
+            print(vals)
+            results.loc[vid] = vals
+
+
+    except Exception as e:
+        #emsg = "".join(str(e)) #error message string hack :(
+        emsg = str(e)
+        #show the error
+        print(vid, " Error: ",emsg)
+        if savedata:
+            #record error in our results array
+            vals = failarray.copy()
+            vals.append(fps)
+            vals.append(emsg)
+            print(vals)
+            results.loc[vid] = vals
+
+
+# -
+
+
+#save the fitted parameters.
+results.to_excel("RightHand.FixedBinFreq.xlsx")
+
+# +
+subsetvids = []
+count = 0
+for vid in videos:
+    subsetvids.append(vid)
+    count += 1
+    if count > 12:
+        break
+    
+print(subsetvids)
+# -
 
 # ## 3.4 Comparing to human coding. 
 #
