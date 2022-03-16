@@ -50,6 +50,7 @@ logger.setLevel(logging.INFO)
 #
 # Load a json file that tells us where to find our videos and where to save the data.  You should create a different settings file for each project. Then you don't need to change any other values in the script for Step 1 or Step 2.
 #
+#
 # `TODO - write a helper to create a settings file`
 
 # +
@@ -137,7 +138,6 @@ print("videos_out_analyses: ", videos_out_analyses)
 #
 # If you want to start afresh just delete this single file and everything gets reprocessed from scratch.
 
-# +
 #retrieve the list of base names of processed videos.
 videosjson = os.path.abspath(settings["paths"]["videos_out"] + '\\' + settings["filenames"]["videos_json"])
 try:
@@ -149,9 +149,6 @@ except:
     with open(videosjson, 'w') as outfile:
         json.dump(videos, outfile)
         print("Creating new videos.json")
-
-
-# -
 
 # ### Either
 # ### 1.4.3.A Scanning all videos in particular folder

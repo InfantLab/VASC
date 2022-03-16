@@ -43,9 +43,13 @@ import logging
 import ipywidgets as widgets  #let's us add buttons and sliders to this page.
 from ipycanvas import Canvas
 from pprint import pprint
+from datetime import datetime
 
 import matplotlib.pyplot as plt
 # %matplotlib inline
+
+import pyarrow.parquet as pq
+import pyarrow as pa
 
 import vasc #a module of our own functions (found in vasc.py in this folder)
 
@@ -53,30 +57,6 @@ import vasc #a module of our own functions (found in vasc.py in this folder)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 # %pdb on
-# -
-
-# ## 2.1 Settings?
-#
-# Load a json file that tells us where to find our videos and where to save the data. You should create a different settings file for each project. Then you don't need to change any other values in the script for Step 1 or Step 2.
-#
-# TODO - write a helper to create a settings file
-#
-
-# +
-#settingsjson = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Little Drummers\\VASC\\settings.json"
-settingsjson = "E:\\little.drummer.20220111\\LD.settings.json"
-
-try:
-    with open(settingsjson) as json_file:
-        settings = json.load(json_file)
-        print("Existing settings.json found..")
-except json.JSONDecodeError:
-    logging.exception("Settings file was not valid JSON.")
-except Exception as e:
-        emsg = str(e)
-        #show the error
-        print("Error: ",emsg)
-        print("No setting.json file found!\nPlease see Step 0 for instructions")
 # -
 
 # ## 2.1 Settings?
@@ -149,10 +129,7 @@ except:
     print("Creating new videos.json")
 
 #optional - check the json
-for vid in videos:
-    print(vid)
-    for cam in videos[vid]:
-        print(videos[vid][cam])
+pprint(videos)
 
 # ### 2.2.2 Original or clean?
 #
@@ -429,7 +406,7 @@ def on_fixlocations(output):
     c = videos[pickvid.value][pickcam.value]["c"]
     end  = videos[pickvid.value][pickcam.value]["end"]
     window = 10
-    vasc.fixpeopleSeries(keypoints_array,v,c,[0,1],slider.value, end, window, includeHands, LH, RH)
+    vasc.fixpeopleSeries(keypoints_array,v,c,[0,1],slider.value, end, window, includeHands, LH_array, RH_array)
     updateAll(True)
 
 def on_fixsizes(output):
@@ -439,7 +416,7 @@ def on_fixsizes(output):
     c = videos[pickvid.value][pickcam.value]["c"]
     N = videos[vid][cam]["maxpeople"]
     end  = videos[pickvid.value][pickcam.value]["end"]
-    vasc.sortpeoplebySize(keypoints_array,v,c,N,slider.value, end, includeHands, LH, RH)
+    vasc.sortpeoplebySize(keypoints_array,v,c,N,slider.value, end, includeHands, LH_array, RH_array)
     updateAll(True)
 
 def on_deleteparticipant(output):
@@ -452,8 +429,8 @@ def on_deleteparticipant(output):
         end  = videos[pickvid.value][cam]["end"]
         vasc.deleteSeries(keypoints_array,v,c,remove.value,0, end)
         if includeHands:
-            vasc.deleteSeries(LH,v,c,remove.value,0, end)
-            vasc.deleteSeries(RH,v,c,remove.value,0, end)
+            vasc.deleteSeries(LH_array,v,c,remove.value,0, end)
+            vasc.deleteSeries(RH_array,v,c,remove.value,0, end)
     #now remove this from videos object
     if pickvid.value in videos:
         logging.info(pickvid.value)
@@ -473,8 +450,8 @@ def on_deleteseries(output):
     end  = videos[pickvid.value][pickcam.value]["end"]
     vasc.deleteSeries(keypoints_array,v,c,remove.value,slider.value, end)
     if includeHands:
-        vasc.deleteSeries(LH,v,c,remove.value,slider.value, end)
-        vasc.deleteSeries(RH,v,c,remove.value,slider.value, end)
+        vasc.deleteSeries(LH_array,v,c,remove.value,slider.value, end)
+        vasc.deleteSeries(LH_array,v,c,remove.value,slider.value, end)
     updateAll(True)
 
 def on_swapcam(output):
@@ -494,8 +471,8 @@ def on_swapchild(output):
     end  = videos[pickvid.value][pickcam.value]["end"]
     vasc.swapSeries(keypoints_array,v,c,0,child.value,slider.value,end)
     if includeHands:
-        vasc.swapSeries(LH,v,c,0,child.value,slider.value,end)
-        vasc.swapSeries(RH,v,c,0,child.value,slider.value,end)
+        vasc.swapSeries(LH_array,v,c,0,child.value,slider.value,end)
+        vasc.swapSeries(LH_array,v,c,0,child.value,slider.value,end)
     updateAll(True)
 
 def on_swapadult(output):
@@ -507,8 +484,8 @@ def on_swapadult(output):
     end  = int(videos[pickvid.value][pickcam.value]["end"])
     vasc.swapSeries(keypoints_array,v,c,1,adult.value,slider.value,end)
     if includeHands:
-        vasc.swapSeries(LH,v,c,1,adult.value,slider.value,end)
-        vasc.swapSeries(RH,v,c,1,adult.value,slider.value,end)
+        vasc.swapSeries(LH_array,v,c,1,adult.value,slider.value,end)
+        vasc.swapSeries(RH_array,v,c,1,adult.value,slider.value,end)
     updateAll(True)
 
 
@@ -756,15 +733,21 @@ if includeHands:
 
 settings["flags"]["cleaned"] = True
 
-import pyarrow.parquet as pq
-import pyarrow as pa
-
 # +
 pq.write_table(pa.Table.from_pandas(cleandf), videos_out_timeseries + '\\' + settings["filenames"]["cleandataparquet"])
 
 if includeHands:
     pq.write_table(pa.Table.from_pandas(cleanLH), videos_out_timeseries + '\\' + settings["filenames"]["lefthandparquet"])
     pq.write_table(pa.Table.from_pandas(cleanRH), videos_out_timeseries + '\\' + settings["filenames"]["righthandparquet"])
+
+print('Parquet files saved')
+
+#after each new id we save the json data
+settings["lastUpdate"] = datetime.now().isoformat()
+with open(settingsjson, 'w') as outfile:
+    json.dump(settings, outfile)
+    print('settings.json updated')
+
 
 
 

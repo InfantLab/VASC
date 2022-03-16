@@ -57,7 +57,7 @@ logger.setLevel(logging.INFO)
 #
 
 # +
-settingsjson = "C:\\Users\\cas\\OneDrive - Goldsmiths College\\Projects\\Little Drummers\\VASC\\settings.json"
+settingsjson = ".\\Drum.Tutorial.settings.json"
 
 try:
     with open(settingsjson) as json_file:
@@ -76,10 +76,6 @@ includeHands = settings["flags"]["includeHands"]
 
 anon = settings["flags"]["anon"]
 
-
-
-
-
 # +
 # where's the project data folder? (with trailing slash)
 projectpath = settings["paths"]["project"]
@@ -92,11 +88,12 @@ videos_out_openpose   = settings["paths"]["videos_out_openpose"]
 videos_out_timeseries = settings["paths"]["videos_out_timeseries"]
 videos_out_analyses   = settings["paths"]["videos_out_analyses"]
 
-print(videos_in)
-print(videos_out)
-print(videos_out_openpose)
-print(videos_out_timeseries)
-print(videos_out_analyses)
+
+print("videos_in: ", videos_in)
+print("videos_out: ", videos_out)
+print("videos_out_openpose: ", videos_out_openpose)
+print("videos_out_timeseries: ", videos_out_timeseries)
+print("videos_out_analyses: ", videos_out_analyses)
 # -
 
 # ### 3.1 Load the clean data as a DataFrame
@@ -140,7 +137,7 @@ df.shape
 # +
 #are we going to use all the data or a subset?
 first = 0
-last = 2989
+last = 4500
 
 df = df.truncate(before  = first, after = last)
 
@@ -376,13 +373,7 @@ output
 #
 # For each infant and each trial we try to find the best
 
-# +
-vid = "424a7d7_04-test-trials"
 
-armmov = avgdf[(vid, people[0], 'leftarm')].to_frame()
-armmov.head
-
-# -
 
 
 who = ["infant","parent"]
@@ -1325,5 +1316,3 @@ https://towardsdatascience.com/granger-causality-and-vector-auto-regressive-mode
 https://www.machinelearningplus.com/time-series/time-series-analysis-python/
 
 https://towardsdatascience.com/four-ways-to-quantify-synchrony-between-time-series-data-b99136c4a9c9
-
-# -

@@ -244,7 +244,7 @@ def varKeypoint(keypointList,indices):
 
 def averageCoordinateTimeSeries(df,indices,videos = "All", people = "Both"):
     """Function to find the average of a set of coordinates from the person location time series.
-    This helps track their centre of mass or the movements of the head, etc.
+    This helps track their centre of mass or the movements of the head, etc. 
     It will take the average of the non-zero keypoints
     Args:
         df: timeseries dataframe.
@@ -255,23 +255,23 @@ def averageCoordinateTimeSeries(df,indices,videos = "All", people = "Both"):
     Returns:
         Average across each row for this subset of columns
     """
-
-    if videos == "All":
+    
+    if videos == "All": 
         #include all the videos
         videos = list(df.columns.levels[0])
-
+        
     if people == "Both":
         #include parent and infant
         people = list(df.columns.levels[1])
-
+    
     if isinstance(indices, list):
         #indices is a set of coordinates
-        #so create a dictionary containing them
+        #so create a dictionary containing them 
         indices = {"avg": indices}
-
+    
     #list of different averages do take for each person?
     idxs =indices.keys()
-
+    
     col_index = pd.MultiIndex.from_product([videos,people,idxs], names=['video','person','avgs'])
 
     avgdf = pd.DataFrame(columns=col_index)
@@ -280,54 +280,54 @@ def averageCoordinateTimeSeries(df,indices,videos = "All", people = "Both"):
         for pers in people:
             for subidx in indices:
                 #dataframes make averaging nice and easy.
-                #avg by vid by pers by subidx
+                #avg by vid by pers by subidx 
                 avgdf[(vid,pers,subidx)] = df[(vid,pers)][indices[subidx]].mean(axis=1)
-
-
+    
+        
     return avgdf
 
 def averageArmHandTimeSeries(bodydata,handdata,armindices,handindices, videos = "All", people = "Both", armtohandweighting = 1):
     """Function to find the average of a set of coordinates from the persons arm and from their hand,
-    provided in separate dataframs.
-    It will take the average of the non-zero keypoints. WHen there is hand data it contributes lots of individual points so we have weighting value so that position of wrist is useful. Higher values mean greater contribuiong from arm.
+    provided in separate dataframs. 
+    It will take the average of the non-zero keypoints. WHen there is hand data it contributes lots of individual points so we have weighting value so that position of wrist is useful. Higher values mean greater contribuiong from arm. 
     Args:
         bodydata: timeseries dataframe.
         handdata: timeseries dataframe.
         indices: if this is a list then we average over indices in list.
                  if it is a dictionary we average over indices in each itemvideo: which video set is this? Default "All" of them
         people: which person (infant or parent)? Default "Both"
-        armtohandweighting : how much relative contribution do arm points and hand points contribute?
-
-
+        armtohandweighting : how much relative contribution do arm points and hand points contribute? 
+        
+        
     Returns:
         Average across each row for this subset of columns
     """
-
-    if videos == "All":
+    
+    if videos == "All": 
         #include all the videos
         videos = list(bodydata.columns.levels[0])
-
+        
     if people == "Both":
         #include parent and infant
         people = list(bodydata.columns.levels[1])
-
+    
     if isinstance(armindices, list):
         #indices is a set of coordinates
-        #so create a dictionary containing them
+        #so create a dictionary containing them 
         armindices = {"avg": armindices}
 
     #list of different averages do take for each person?
     armidxs =armindices.keys()
-
+    
     if isinstance(handindices, list):
         #indices is a set of coordinates
-        #so create a dictionary containing them
+        #so create a dictionary containing them 
         handindices = {"avg": handindices}
 
     #list of different averages do take for each person?
     bodyidxs =armindices.keys()
     handidxs =handindices.keys()
-
+    
     col_index = pd.MultiIndex.from_product([videos,people,bodyidxs], names=['video','person','avgs'])
 
     avgdf = pd.DataFrame(columns=col_index)
@@ -336,12 +336,12 @@ def averageArmHandTimeSeries(bodydata,handdata,armindices,handindices, videos = 
         for pers in people:
             for subidx in armindices:
                 #dataframes make averaging nice and easy.
-                #avg by vid by pers by subidx
-                #weighting formula
+                #avg by vid by pers by subidx 
+                #weighting formula 
                 #(wt * arm + 1 * hand)/(wt + 1)
-                avgdf[(vid,pers,subidx)] = (armtohandweighting * bodydata[(vid,pers)][armindices[subidx]].mean(axis=1) + handdata[(vid,pers)][handindices[subidx]].mean(axis=1))/(armtohandweighting + 1)
-
-
+                avgdf[(vid,pers,subidx)] = (armtohandweighting * bodydata[(vid,pers)][armindices[subidx]].mean(axis=1) + handdata[(vid,pers)][handindices[subidx]].mean(axis=1))/(armtohandweighting + 1) 
+    
+        
     return avgdf
 
 def diffKeypoints(keypoints1,keypoints2,indices):
@@ -440,10 +440,10 @@ def swapSeries(keypoints_array,v,c,pers1,pers2,start,end):
     Returns:
         a rearranged keypoints_array
     """
-    temp = np.copy(keypoints_array[v,c,start:end,pers1,:])  #temporary copy pers1
+    temp = np.copy(keypoints_array[v,c,start:end,pers1,:])  #temporary copy pers1 
     keypoints_array[v,c,start:end,pers1,:] = keypoints_array[v,c,start:end,pers2,:] #pers2 to pers 1
     keypoints_array[v,c,start:end,pers2,:] = temp
-
+    
     return keypoints_array
 
 def deleteSeries(keypoints_array,v,c,pers,start,end):
@@ -467,13 +467,13 @@ def deleteSeries(keypoints_array,v,c,pers,start,end):
 
 def minimumswaps(deltas):
     """For NxN np.array of distances between people we want to 'diagonalise the minimums'. That is to say we want
-    to find the smallest single entry and remove the row and column containing that then repeat the process.
-    The use case is for when openpose mislabels skeletons from one frame to the next. We take a matrix of
-    distances between the centroids and map each to its nearest from frame f to frame f+1 so we can swap them.
+    to find the smallest single entry and remove the row and column containing that then repeat the process. 
+    The use case is for when openpose mislabels skeletons from one frame to the next. We take a matrix of 
+    distances between the centroids and map each to its nearest from frame f to frame f+1 so we can swap them. 
     So what i really need is set of swaps. And for N x N matrix we only need N-1 swaps.
     Args:
         deltas: A 2dimensional np.array of minimal differences between pairs of elements
-    Returns:
+    Returns: 
         a set of ordered pairs to swap.
     """
     (rs,cs) = deltas.shape
@@ -485,19 +485,19 @@ def minimumswaps(deltas):
         deltas[:,rc[1]] = np.inf
         deltas[rc[0],:] = np.inf
         swaps.append(rc)
-    return swaps
+    return swaps    
 
 def sortpeoplebySize(keypoints_array,v,c,maxpeople, start, end, includeHands = False,rightHand = None, leftHand = None):
     """Openpose isn't consistent in labelling people (person 1 could be labeled pers 2 in next frame).
     However, in many cases the videos are expected to contain an adult and a young child so sorting by size is a sensible thing to try.
     To keep them in the same series we label them so that person with the lowest spread of wireframe nodes has the lowest index.
-    Do do this we take variance from Centre of Gravity for each person in the frame and then label them in.
-    Nearest means the closest averaged over set of coordinates There will often be missing points in a frame so we ought to account for that.
+    Do do this we take variance from Centre of Gravity for each person in the frame and then label them in. 
+    Nearest means the closest averaged over set of coordinates There will often be missing points in a frame so we ought to account for that. 
     Args:
         keypoints_array: all the data.
         v: which video? - specifies first dimension of array
         c: which camera? - specifies first dimension of array
-        people: list of all people we are comparing.
+        people: list of all people we are comparing. 
         start: where in time series do we start? (TODO can be blank - start at beginning)
         end: where in time series do we end? (TODO can be blank - to end)
     Returns:
@@ -509,27 +509,27 @@ def sortpeoplebySize(keypoints_array,v,c,maxpeople, start, end, includeHands = F
         for p1 in range(maxpeople): #first person from frame f
             vs = {} #dictionary for vars
             personkeypoints = keypoints_array[v,c,f,p1,:]
-            varx = varKeypoint(personkeypoints,xs)
-            vary = varKeypoint(personkeypoints,ys)
+            varx = varKeypoint(personkeypoints,xs) 
+            vary = varKeypoint(personkeypoints,ys) 
             vs[p1] = 0.5 *(varx + vary)
-
+            
         #now we know the vars for each index lets sort them
-        #sort by index
+        #sort by index 
         vs = dict(sorted(vs.items(), key=lambda item: item[0]))
         while len(vs) > 1: #while there more than one we may still need to swap something
             minkey = min(vs.keys())        #smallest index
             minvarkey = min(vs,key=vs.get) #smallest value
             # if minkey == minvarkey do nothing as smallest index already has smallest value
-            if minkey != minvarkey:
+            if minkey != minvarkey:        
                 #swap these sets of data around
                 #print("swap", minkey, minvarkey)
-                #first swap the rest of series between these two
+                #first swap the rest of series between these two 
                 keypoints_array = swapSeries(keypoints_array,v,c,minkey,minvarkey,f,end)
                 if includeHands:
                     leftHand = swapSeries(leftHand,v,c,minkey,minvarkey,f,end)
                     rightHand = swapSeries(rightHand,v,c,minkey,minvarkey,f,end)
-
-                #now swap the keys
+                
+                #now swap the keys 
                 vs[minvarkey] = vs[minkey]
             vs.pop(minkey)  #remove the smallest one and loop again
     return keypoints_array, leftHand, rightHand
@@ -537,17 +537,17 @@ def sortpeoplebySize(keypoints_array,v,c,maxpeople, start, end, includeHands = F
 def fixpeopleSeries(keypoints_array,v,c,people, start, end, window = 1, includeHands = False,rightHand = None, leftHand = None):
     """Openpose isn't consistent in labelling people (person 1 could be labeled pers 2 in next frame).
     So we go through frame by frame and label people in new frame with index of nearest person from previous frame. This *should* fix things.
-    Do do this we take difference in location of coordinates of person 1 in this frame with all people in next frame. Let's say this is Person 4. We swap person 4 and person 1 data in all subsequent frames effectively relabling them. Now do same for person two but only comparing to person 2 upwards in next frame.
-    Nearest means the closest averaged over set of coordinates. There will often be missing points in a frame so we ought to account for that.
-    If we use a window > 1 then we add up the differences with several previous frames.
+    Do do this we take difference in location of coordinates of person 1 in this frame with all people in next frame. Let's say this is Person 4. We swap person 4 and person 1 data in all subsequent frames effectively relabling them. Now do same for person two but only comparing to person 2 upwards in next frame. 
+    Nearest means the closest averaged over set of coordinates. There will often be missing points in a frame so we ought to account for that. 
+    If we use a window > 1 then we add up the differences with several previous frames. 
     Args:
         keypoints_array: array of all the data.
         v: integer, which video? - specifies first dimension of array
         c: integer, which camera? - specifies second dimension of array
-        people: list of indices of people we are comparing.
+        people: list of indices of people we are comparing. 
         start: where in time series do we start? (TODO if it's blank - start at beginning)
         end: where in time series do we end? (TODO if it's blank - to end)
-        window: optional integer, if > 1 we use a rolling window including frame f -1, f-2, etc.
+        window: optional integer, if > 1 we use a rolling window including frame f -1, f-2, etc. 
         includeHands: - do we need to keep track of the separate hand data?
     Returns:
         a rearranged keypoints_array
@@ -577,12 +577,12 @@ def fixpeopleSeries(keypoints_array,v,c,people, start, end, window = 1, includeH
         #ok, now we know the pairwise distances
         #next we find the pairwise mimimums
         swaplist = minimumswaps(deltas)
-        #finally we swap these time series from the next frame so each persons continues
+        #finally we swap these time series from the next frame so each persons continues 
         for swap in swaplist:
             p1  = swap[0]
             p2 = swap[1]
             if p1 != p2:
-                #swap the rest of series between these two
+                #swap the rest of series between these two 
                 keypoints_array = swapSeries(keypoints_array,v,c,p1,p2,f+1,end)
                 if includeHands:
                     leftHand = swapSeries(leftHand,v,c,p1,p2,f+1,end)
@@ -591,7 +591,7 @@ def fixpeopleSeries(keypoints_array,v,c,people, start, end, window = 1, includeH
 
 def swapCameras(videos, keypoints_array,vidx,cam1,cam2):
     """helper function for swapping secondary camera angle to main camera.
-    Usually this means to 'camera1' but we make the routine more general.
+    Usually this means to 'camera1' but we make the routine more general. 
     We need to swap the json labels and the keypoints_array. We use the v & c indices stored in the json file.
     Args:
         keypoints_array: all the data.
@@ -607,33 +607,33 @@ def swapCameras(videos, keypoints_array,vidx,cam1,cam2):
     c1 = videos[vidx][cam1]["c"]
     v2 = videos[vidx][cam2]["v"]
     c2 = videos[vidx][cam2]["c"]
-
+    
     #swap the video info
     temp = videos[vidx][cam1]
     videos[vidx][cam1] = videos[vidx][cam2]
     videos[vidx][cam2] = temp
-
+    
     #swap the data
-    temp = np.copy(keypoints_array[v1,c1,:,:,:])  #temporary copy pers1
+    temp = np.copy(keypoints_array[v1,c1,:,:,:])  #temporary copy pers1 
     keypoints_array[v1,c1,:,:,:] = keypoints_array[v2,c2,:,:,:] #pers2 to pers 1
     keypoints_array[v2,c2,:,:,:] = temp
-
-
+    
+    
     #finally swap the indices of the data to reference their new positions
     #Yes, this seems weird but it is correct!
     videos[vidx][cam1]["v"] = v1
     videos[vidx][cam1]["c"] = c1
     videos[vidx][cam2]["v"] = v2
     videos[vidx][cam2]["c"] = c2
-
+    
     return videos, keypoints_array
 
 def crosscorr(data1, data2, lag=0, wrap=False):
-    """ Lag-N cross correlation.
+    """ Lag-N cross correlation. 
     Take two time series data1 and data2 then shift series 2 by a lag (+ve or -ve)
-    and then see what correlation between the two is.
-    Either wrap data around to fill gap or shifted data filled with NaNs
-
+    and then see what correlation between the two is. 
+    Either wrap data around to fill gap or shifted data filled with NaNs 
+ 
     Parameters
     ----------
     lag : int, default 0
@@ -644,9 +644,9 @@ def crosscorr(data1, data2, lag=0, wrap=False):
     ----------
     crosscorr : float
     """
-    if wrap:
+    if wrap: 
         shifted2 = data2.shift(lag)
         shifted2.iloc[:lag] = data2.iloc[-lag:].values
         return data1.corr(shifted2)
-    else:
+    else: 
         return data1.corr(data2.shift(lag))
