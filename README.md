@@ -1,8 +1,8 @@
 # Video Actor Synchrony and Causality Toolkit (VASC)
 ### Created by Caspar Addyman <c.addyman@gold.ac.uk>
-#### Goldsmiths, University of London, 2020
+#### Goldsmiths, University of London, 2022
 
-_Version - Still alpha!_
+_Version - 0.2_
 
 Videos of interacting humans are converted into time series data with [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose). The data are processed and then various statistical measures of synchrony and causality between actors are calculated using [scipy](https://www.scipy.org/scipylib/index.html).
 
@@ -12,7 +12,7 @@ This repository provides Python code and annotated Jupyter notebooks to perform 
 * Step 1: Process a video (or videos) with OpenPose, creating JSON file per frame with wireframe data for all identified persons ('actors'). Extract video by video, frame by frame data from JSON files and combine into a single numpy array.
 * Step 2: Load nparray from step 1 & perform basic validations (identifying individuals over time, tagging windows of interest, handle missing data).
 * Step 3: Perform fourier analysis to extract rythmic movements and compare across groups. 
-* Step 4: Calculate cross-correlations, Granger Causality (and other measures) between multiple actors in same video. 
+* Step 4: Calculate cross-correlations, Granger Causality (and other measures) between multiple actors in same video. *Still in development*
 
 ## Installation
 
@@ -20,14 +20,14 @@ To get these scripts working on a new system you need to do the following
 
 ### Prequisites
 First you need to make sure you have supporting software installed. 
-1. You need a working Python 3.7 environment with support for Jupyter notebooks. The easiest way to do this is to install [Anaconda](https://www.anaconda.com/distribution/).
+1. You need a working Python environment (Python v3.7 or higher) with support for Jupyter notebooks. The easiest way to do this is to install [Anaconda](https://www.anaconda.com/distribution/).
 2. Install [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose)
 3. Next you need to download the trained neural-network models that OpenPose uses. To do this go to the `models` subdirectory of OpenPose directory, and double-click / run the `models.bat` script.
 
 ### Installing this code.
 
 You have two options to install this code. Either download the contents of this repository as a [zip file](https://github.com/InfantLab/VASC/archive/master.zip) to your local machine. 
-Or if you are familiar with Github you can [fork](https://docs.github.com/en/github/getting-started-with-github/fork-a-repo) this repository and keep you own copy of the files with a version history. We recommend using the [Github Desktop](https://docs.github.com/en/desktop) app to manage this.
+Or if you are familiar with GitHub you can [fork](https://docs.github.com/en/github/getting-started-with-github/fork-a-repo) this repository and keep you own copy of the files with a version history. We recommend using the [Github Desktop](https://docs.github.com/en/desktop) app to manage this.
 
 ### Running the code
 
@@ -48,24 +48,17 @@ conda create -f environment.yml
 #### Requirements
 The main requirements are:
 
-  - numpy
-  - seaborn
-  - pandas
-  - glob2
-  - opencv
-  - pyarrow
-  - xlrd
-  - jupytext
-  - ipywidgets
-  - ipycanvas
+  - numpy, pandas, glob2, opencv
+  - pyarrow, xlrd, jupytext
+  - ipywidgets, ipycanvas
   - nodejs
 
-(and their own dependencies). 
+(and their dependencies). 
 
-## Tutorial
-### *Coming Soon* 
-A tutorial will be providing using an example of mother infant interaction and set of videos you can download.  
+## DrumTutorial
+The folder `DrumTutorial` will steps you through a small example of using Fourier transforms to extract drumming tempo from a set of short videos of infants and adults drumming. It will be downloaded when you install the contents of this folder. 
 
+## Video Walkthrough
 In the meantime, you can watch this [walkthrough video](https://goldsmiths.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=5a113d3f-8f7b-454b-b3c9-ace300c99c41). 
 
 
