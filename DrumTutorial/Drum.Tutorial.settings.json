@@ -1,0 +1,31 @@
+{
+  "batchName": "VASC Drumming Data tutorial",
+  "lastUpdate": "2022-03-14T09:23:08.849601",
+  "flags": {
+    "anon": false,
+    "includeHands": true,
+    "cleaned": true
+  },
+  "paths": {
+    "openpose": "C:\\Users\\cas\\openpose-1.5.0-binaries-win64-gpu-python-flir-3d_recommended\\",
+    "project": ".\\DrumTutorial",
+    "videos_in": ".\\DrumTutorial\\videos",
+    "videos_out": ".\\DrumTutorial\\",
+    "videos_out_openpose": ".\\DrumTutorial\\openpose",
+    "videos_out_timeseries": ".\\DrumTutorial\\timeseries",
+    "videos_out_analyses": ".\\DrumTutorial\\analyses"
+  },
+  "filenames": {
+    "videos_json": "videos.json",
+    "clean_json": "clean.json",
+    "alldatanpz": "allframedata.npz",
+    "lefthandnpz": "lefthandframedata.npz",
+    "righthandnpz": "righthandframedata.npz",
+    "cleannpz": "cleandata.npz",
+    "cleanrightnpz": "cleanrightdata.npz",
+    "cleanleftnpz": "cleanleftdata.npz",
+    "cleandataparquet": "cleandata.parquet",
+    "righthandparquet": "righthand.parquet",
+    "lefthandparquet": "lefthand.parquet"
+  }
+}

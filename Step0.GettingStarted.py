@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.0
+#       jupytext_version: 1.7.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -33,11 +33,11 @@
 
 # ### 0.1 - OpenPoseDemo application
 #
-# Next we need to download and install the [OpenPoseDemo](https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/demo_overview.md) executable.
+# The full OpenPose software comes as source code that your computer can compile into a working application. This is unnecessary for this project. Instead, we need to download and install the [OpenPoseDemo](https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/01_demo.md) executable. (`openposedemo.exe` on Windows, `openpose.bin` on Mac/Linux.)
 #
 # Additionally, you need to download the trained neural-network models that OpenPose uses. To do this go to the `models` subdirectory of OpenPose directory, and double-click / run the `models.bat` script.
 #
-# The `openposedemo` bin/exe file can be run manually from the command line. It is worth trying this first so you understand what  `openposedemo` is. See [this guide](https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/demo_overview.md) or open a terminal app or Windows Powershell, navigate to the openpose installation folder and then try this command
+# The `openposedemo` bin/exe file can be run manually from the command line. It is worth trying this first so you understand what  `openposedemo` is. See [this guide](https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/01_demo.md) or open a terminal app or Windows Powershell, navigate to the openpose installation folder and then try this command
 #
 # ```
 # :: Windows
@@ -48,7 +48,7 @@
 
 # ### 0.2 - Load python libraries
 #
-# There are a handful of python libraries that we use for things like image manipulation, file operations, maths and stats. Many are probably already installed by default such as `os, math, numpy, pandas, matplotlib`. Others need adding to our python environment. 
+# Additionally, there are a handful of python libraries that we use for things like image manipulation, file operations, maths and stats. Many are probably already installed by default such as `os, math, numpy, pandas, matplotlib`. Others need adding to our python environment. 
 #
 # PyArrow is a useful extension for saving Pandas and NumPy data. We need it to move the large array created in Step 2 to Step 3. 
 #
@@ -57,7 +57,7 @@
 # conda install glob2 opencv pyarrow xlrd openpyxl
 # ```
 # #### Troubleshooting
-# If when you run the code in Steps 1, 2 & 3 you might see an error like `ModuleNotFoundError: No module named 'glob'` this is because that python module needs to be installed on your computer. If you use Anaconda, the missing module can usually be installed with the command `conda install glob`.
+# If when you run the code in any of the next Steps ([Step 1](Step1.ProcessVideo.ipynb), etc) you might see an error like `ModuleNotFoundError: No module named 'glob'` this is because that python module needs to be installed on your computer. If you use Anaconda, the missing module can usually be installed with the command `conda install glob`.
 
 # ### 0.3 - iPyWidgets
 #
@@ -69,13 +69,7 @@
 # To make these work with the newer Jupyter Lab we also need to install the widgets lab extension, like so:
 #
 # ```
-# Jupyter 3.0 (current)
 # conda install -c conda-forge jupyterlab_widgets
-#
-# Jupyter 2.0 (older)
-# conda install -c conda-forge nodejs
-# jupyter labextension install @jupyter-widgets/jupyterlab-manager
-# jupyter labextension install @jupyter-widgets/jupyterlab-manager ipycanvas
 # ```
 #
 # Documentation:
@@ -102,12 +96,21 @@
 #
 # ```jupyter nbextensions_configurator enable --user```
 #
+# Documentation:
+#
 # * https://jupyter-contrib-nbextensions.readthedocs.io/en/latest/index.html
 # * https://moonbooks.org/Articles/How-to-create-a-table-of-contents-in-a-jupyter-notebook-/
 #
 
-# ### 0.6 - Using Jupyter with network drives
+# ### 0.7 - Using Jupyter with network drives
 #
 # By default Jupyter launched from Anaconda Navigator will open it in your home directory. It then might not be possible to access files on a network drive you need. To get around this first launch a command window for the correct Jupyter environment. Then use this command to launch Jupyter itself (assuming you want to access the U:/ drive). 
 #
 # ```jupyter lab --notebook-dir U:/```
+
+# ### 0.8 Done (hopefully!)
+#
+# Once everything is installed we can move onto [Step 1](Step1.ProcessVideo.ipynb).
+#
+# ### 0.9 Something didn't work
+# If you encounter any problems or have any comments or questions, either contact [Caspar Addyman <c.addyman@gold.ac.uk](mailto:c.addyman@gold.ac.uk) or submit an [issue report](https://github.com/InfantLab/VASC/issues).

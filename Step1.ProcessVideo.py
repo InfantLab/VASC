@@ -24,6 +24,8 @@
 # This script uses [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) human figure recognition neural network to create labeled wireframes for each figure in each frame of a video. OpenPoseDemo will go through a video frame by frame outputing a JSON file for each frame that contains a set of coordinate points and for a wireframe for each video.
 
 # ## 1.0 - Libraries
+#
+# This script needs the following python libraries to run. If you encounter an error on this first step, it is likely because a library hasn't been installed on your computer. See Step 0 for how to install python libraries.
 
 # +
 #import the python libraries we need
@@ -48,13 +50,13 @@ logger.setLevel(logging.INFO)
 
 # ### 1.1 Settings?
 #
-# Load a json file that tells us where to find our videos and where to save the data.  You should create a different settings file for each project. Then you don't need to change any other values in the script for Step 1 or Step 2.
+# Load a JSON file that tells us where to find our videos and where to save the data.  You should create a different settings file for each project. Then you don't need to change any other values in the script for Step 1 or Step 2. They will read them from this file. 
 #
 #
 # `TODO - write a helper to create a settings file`
 
 # +
-settingsjson = ".\\Drum.Tutorial.settings.json"
+settingsjson = ".\\DrumTutorial\\Drum.Tutorial.settings.json"
 
 try:
     with open(settingsjson) as json_file:
@@ -87,6 +89,8 @@ else:
 
 openposeapp = openposepath + app
 print(openposeapp)
+
+print("OpenPose found: ", os.path.exists(openposeapp))
 
 # + [markdown] tags=[]
 # ### 1.3 Where are your videos?
@@ -151,7 +155,7 @@ except:
         print("Creating new videos.json")
 
 # ### Either
-# ### 1.4.3.A Scanning all videos in particular folder
+# ### 1.4.2.A Scanning all videos in particular folder
 #
 # In which case we look at all videos in `videos_in` let the names of the files also provide the base names for each participant we create.
 #
@@ -292,7 +296,7 @@ pprint(videos)
 #beware that pretty print sometimes messes up the display formating of fullpath,.
 #(this should not affect actual code that uses fullpath)
 
-# ### 1.5 Calling the OpenPose app
+# ## 1.5 Calling the OpenPose app
 # To operate OpenPose we pass a set of parameters to the demo executable. For the full list of options see  [OpenPoseDemo](https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/demo_overview.md)
 #
 # Our main parameters are
@@ -331,12 +335,15 @@ createoutputvideo = True #do we get openpose to create a video output?
 
 # ### The main openpose loop
 #
-# Call the `openposedemo` app for each of the videos at a time. For each one print the full command that we use so that you can use it manually to investigate any errors.
+# Call the `openposedemo` app for each of the videos at a time. For each one print the full command that we use so that you can use it manually to investigate any errors. 
+#
+# Essentially, we are recreating in code what you would do on a command line for each individual video. So we need to know the location of the video, the location we want to output the data and what flags to use. See the [OpenPose documentation](https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/01_demo.md) for more details.
 #
 # Finally, we write a list of the processed videos to a file called `videos.json`.
 # Note that we will add other information to this file as we go through other steps.
 #
-# TODO - We might use videos.json to let this processing happen in blocks. i.e. not calling for openpose if video is already processed.
+# Videos.json makes note of videos that have already been processed. So that processing can happen in blocks. i.e. not calling for openpose if video is already processed.
+#
 
 # +
 currdir =  os.getcwd() + "\\" #keep track of current directory so we can change back to it after processing
@@ -404,7 +411,7 @@ os.chdir(currdir)
 
 # ## 1.6 Gather the data into useable format.
 #
-# OpenPose has created one JSON file per frame of video. We want to group these up into bigger arrays.
+# OpenPose has created one JSON file per frame of video. We want to group these up into bigger arrays. We use the standard NumPy array for this. But because these arrays can get large we save in a compressed format. 
 #
 # This routine needs to know where to find the processed videos and what are the base names. These are listed in the `videos.json` file we created.
 

@@ -67,7 +67,7 @@ logger.setLevel(logging.INFO)
 #
 
 # +
-settingsjson = ".\\Drum.Tutorial.settings.json"
+settingsjson = ".\\DrumTutorial\\Drum.Tutorial.settings.json"
 
 try:
     with open(settingsjson) as json_file:
@@ -177,15 +177,20 @@ keypoints_array.shape
 #
 # We now have an numpy array called `keypoints_array` containing all the openpose numbers for all videos. Now we need to do some cleaning of the data. We provide set of tools to do this. There are several tasks we need to do.
 #
-# 1. Pick camera with best view of both participants - swap this to camera 1 (if multiple cameras).
-# 2. You might delete sets for whom all data is too poor quality. But they can also be excluded in **Step 3** by a flag in the data spreadsheet.
-# 3. Tag the adult & infant in first frame of interest. So both individuals should be in first frame.
-# 4. Try to automatically tag then in subsequent frames.
-# 5. Manually fix anything the automatic process gets wrong.
-# 6. Exclude other detected people (3rd parties & false positives)
+# 1. Use the first drowp down to select the video we want to processs. 
+# 2. Pick camera with best view of both participants - swap this to camera 1 (if multiple cameras).
+# 3. You might delete sets for whom all data is too poor quality. But they can also be excluded in **Step 3** by a flag in the data spreadsheet.
+# 4. Tag the adult & infant in first frame of interest. So both individuals should be in first frame.
+# 5. Try to automatically tag then in subsequent frames.
+# 6. Manually fix anything the automatic process gets wrong.
+# 7. Exclude other detected people (3rd parties & false positives)
 #
 # We do all of this with the control panel below.
 #
+
+# ### Step 2.3.0: Which video?
+#
+# The first drop down lets you choose which video to look at. 
 
 # ### Step 2.3.1: Which is best camera angle?
 #
@@ -195,7 +200,7 @@ keypoints_array.shape
 # ### Step 2.3.2: Where does the interesting data start and end?
 #
 # For many videos, the period of interest might start (and end) some time into the video. For now we are using the whole video .
-# TODO  - We wiil give the user the opportunity to set these.
+#
 #
 
 # +
@@ -726,7 +731,7 @@ if includeHands:
     cleanLH = cleanLH.sort_index(axis = 1)
     cleanRH = cleanRH.sort_index(axis = 1)
 
-# ### Finally save this to a compressed file.
+# ### Step 2.9 Finally save this to a compressed file.
 #
 # We use the fast `parquet` format with library `pyarrow` in order to preserve our hierarchical index in a compressed format. We save into the timeseries sub-folder.
 #
