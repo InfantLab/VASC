@@ -76,4 +76,4 @@ Grant:
 
 
 ## Feedback
-If you have any comments or questions, either contact [Caspar Addyman <c.addyman@gold.ac.uk](mailto:c.addyman@gold.ac.uk) or submit an [issue report](https://github.com/InfantLab/VASC/issues).
+If you have any comments or questions, either contact [Caspar Addyman <c.addyman@gold.ac.uk>](mailto:c.addyman@gold.ac.uk) or submit a [issue report](https://github.com/InfantLab/VASC/issues) here on Github.
