@@ -75,4 +75,5 @@ Grant:
 [Frontiers of Development](https://www.raeng.org.uk/grants-and-prizes/grants/international-research-and-collaborations/frontiers/frontiers-of-development) - Tranche 2 - FoDSF\1920\2\100020
 
 
-
+## Feedback
+If you have any comments or questions, either contact [Caspar Addyman <c.addyman@gold.ac.uk](mailto:c.addyman@gold.ac.uk) or submit an [issue report](https://github.com/InfantLab/VASC/issues).
