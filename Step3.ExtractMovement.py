@@ -58,7 +58,7 @@ logger.setLevel(logging.INFO)
 #
 
 # +
-settingsjson = ".\\Drum.Tutorial.settings.json"
+settingsjson = ".\\DrumTutorial\\Drum.Tutorial.settings.json"
 
 try:
     with open(settingsjson) as json_file:
@@ -129,8 +129,14 @@ print(df.head())
 
 # ## 3.2 Process the data
 #
-# Next we set all 0 values to as missing value `np.nan` to enable interpolation.
-# Then use numpy's built in `interpolate` method.
+# Before focusing directly on the body part of interest there are several global processing steps we can apply to all the data that we have.
+#
+
+# ### 3.2.1 Interpolate missing data.
+#
+# In the dataframe all missing data is represented by a zerro (0.0) value. This is where a body part is not visible or goes off the edge of the frame. We'd like to interpolate these gaps (if possible). So first we find and replace all zeros with `np.nan` (numpy's indcitor for 'not a number'.
+#
+# Then we use the `interpolate()` method to linearly interpolate the missing data.
 
 df = df.replace(0.0, np.nan)
 if includeHands:
@@ -167,7 +173,11 @@ df.shape
 
 print(lh.head())
 
-# ### 3.2.1 Mean movements
+# ### 3.2.2 Mean body part movements
+#
+# In some cases we might wish to know the avearge location of the head, body, arm or hand. To do this we average together all the points for a given body part and create a new time series for this point. Likewise we may with smooth the movement data by taking a moving average of several frames at once. Or look at the amount of movement by calculating a variance measure. 
+#
+#
 # We create a dictionary of the subsets of OpenPose coordinates we want to average (per frame) and then call `mean` on the Pandas dataframe. e.g.
 #
 # ```
@@ -226,19 +236,20 @@ people = ["infant","parent"]
 avgdf = vasc.averageCoordinateTimeSeries(df,meanpoints,vids,people)
 
 
-handpoints = {"hand" : vasc.hxys,
-       "handx" : vasc.hxs,
-       "handy" : vasc.hys}
+if includeHands:
+    handpoints = {"hand" : vasc.hxys,
+           "handx" : vasc.hxs,
+           "handy" : vasc.hys}
 
-avglh = vasc.averageCoordinateTimeSeries(lh,handpoints,vids,people)
-avgrh = vasc.averageCoordinateTimeSeries(rh,handpoints,vids,people)
+    avglh = vasc.averageCoordinateTimeSeries(lh,handpoints,vids,people)
+    avgrh = vasc.averageCoordinateTimeSeries(rh,handpoints,vids,people)
 
 # -
 
 #optionally have a look
 avgdf.head
 
-# ### 3.2.2 Combining hand and wrist data
+# ### 3.2.3 Combining hand and wrist data
 #
 # If we have hand data from OpenPose then we can combine this with the body data to get more accurate movements for the left and right hands. Similar to what we did on the step before but combining across multiple dataframes.
 #
@@ -269,19 +280,20 @@ handpoints = {"hand" : vasc.hxys,
        "handy" : vasc.hys}
 
 
-rightarmhand = vasc.averageArmHandTimeSeries(df,rh,rightarmpoints,handpoints,vids,people)
-leftarmhand  = vasc.averageArmHandTimeSeries(df,lh,leftarmpoints,handpoints,vids,people)
+if includeHands:
+    rightarmhand = vasc.averageArmHandTimeSeries(df,rh,rightarmpoints,handpoints,vids,people)
+    leftarmhand  = vasc.averageArmHandTimeSeries(df,lh,leftarmpoints,handpoints,vids,people)
 
-#combine hand and wrist data weighting in ratio
-wristtohandweightratio = 21 #since the hand has 21 times more points than wrist but we want both to contribute
+    #combine hand and wrist data weighting in ratio
+    wristtohandweightratio = 21 #since the hand has 21 times more points than wrist but we want both to contribute
 
-rightwristhand = vasc.averageArmHandTimeSeries(df,rh,rightwristpoints,handpoints,vids,people,wristtohandweightratio)
-leftwristhand  = vasc.averageArmHandTimeSeries(df,lh,leftwristpoints,handpoints,vids,people, wristtohandweightratio)
+    rightwristhand = vasc.averageArmHandTimeSeries(df,rh,rightwristpoints,handpoints,vids,people,wristtohandweightratio)
+    leftwristhand  = vasc.averageArmHandTimeSeries(df,lh,leftwristpoints,handpoints,vids,people, wristtohandweightratio)
 # -
 
 rightwristhand
 
-# ### 3.2.2 Rolling window of movements
+# ### 3.2.4 Rolling window of movements
 #
 # One thing we'd like to know is if mothers move in response to infants. The raw time series are probably too noisy to tell us this so instead we can look at few alternatives
 #
@@ -313,7 +325,7 @@ smoothleftwristhand = leftwristhand.rolling(window = 5).mean()
 
 # -
 
-# ## Visualising the data
+# ## Step 3.3 Visualising the data
 #
 # Let's create a widget to plot some graphs of the data
 
@@ -549,9 +561,9 @@ who = ["infant","parent"]
 parts = ["head","arms","all"]
 
 
-# ## 3.3 Read in behavioural coding from Spreadsheet
+# ## Step 3.4 Read in behavioural coding from Spreadsheet
 #
-# We load the data from the spreadsheet `LittleDrummers_FormattedDataSheet.xlsx`. 
+# We load the data from the spreadsheet `LittleDrummers_TutorialManualCoding.xlsx`. 
 #
 # The worksheet `ManualCoding` contains one row per participant and includes the participant ids, the condition they are in, human rating of whether they drumming, whether this was visible on camera and which hand or hands they used. 
 #
@@ -561,7 +573,7 @@ parts = ["head","arms","all"]
 #
 
 # +
-excelfile = videos_out  + "\\LittleDrummers_FormattedDataSheet.xlsx"
+excelfile = videos_out  + "\\LittleDrummers_TutorialManualCoding.xlsx"
 
 manualcoding = pd.read_excel(excelfile, sheet_name = "ManualCoding",  header=[0,1])
 
@@ -575,7 +587,7 @@ print(f"ManualCoding sheet contains {nchildren} rows.")
 print(f"Fourier data sheet contains {len(fourier)} rows.")
 # -
 
-# ## 3.3.1 Find trial info
+# ## Step 3.4.1 Find trial info
 #
 # For each trail we need to know the target inter stimulus interval (ISI) for each trial. For children in condition 0 the trial order was (400, 600, 500, 700), in condition 1 the order was (700,500,600,400). Then we need to know 
 
@@ -673,7 +685,7 @@ def TrialInfo(manualcodingsheet, fourier, vidString):
     
     trial.cleaned = child.at[rowidx, (trial.name,"Data cleaned")]
     trial.attempted = child.at[rowidx, (trial.name,"Trial Attempted")]
-    trial.complete = child.at[rowidx, (trial.name,"Trial Complete")]
+    trial.respcompleted = child.at[rowidx, (trial.name,"Trial Complete")]
     trial.inView = child.at[rowidx, (trial.name,"In View")]
     trial.infantDrum = child.at[rowidx, (trial.name,"Infant Drum")]
     trial.rightHand = child.at[rowidx, (trial.name,"Right Hand")]
@@ -689,7 +701,8 @@ def annotate_axes(ax, text, fontsize=18):
 
 # +
 trial = TrialInfo(manualcoding, fourier,vidstring)
-print(trial.ID,trial.respcompleted)
+print(trial.ID)
+print(trial.respcompleted)
 print(trial.inView )
 
 
@@ -720,7 +733,7 @@ print(gender)
 
 
 # + [markdown] tags=[]
-# ## 3.4 Finding fundamental frequency with FFT
+# ## 3.5 Finding fundamental frequency with FFT
 #
 #
 # A good guide can be found here https://realpython.com/python-scipy-fft/
@@ -1010,7 +1023,7 @@ for targetISI in [400,500,600,700]:
 
 
 
-# ### Child drumming accuracy
+# ### Step 3.6 Child drumming accuracy
 #
 # For each child we want to compare the drumming they did to the target shown on the screen. So collect together all the (non-SMT) trials in which there was drumming and show the peak Freq, ISI for each hand (that drums). The 'best' hand is defined to be the hand which the greater power at the peak frequency.
 

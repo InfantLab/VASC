@@ -345,7 +345,8 @@ def averageArmHandTimeSeries(bodydata,handdata,armindices,handindices, videos = 
     return avgdf
 
 def diffKeypoints(keypoints1,keypoints2,indices):
-    """Function to find how far apart one set of points is from another.
+    """
+    Function to find how far apart one set of points is from another.
     This is useful for seeing if we have same person labelled correctly
     from one frame to next. If any point goes out of frame (loc == 0)
     then we don't include that pair.
@@ -424,7 +425,14 @@ def drawBodyCG(frame, framekeypoints, people):
         cv2.circle(frame,cgloc, 2, [0,0,0], -1, cv2.LINE_AA)
 
         txtloc = tuple((int(avx) - 50,int(avy) - 30))
-        cv2.putText(frame, str(p), txtloc, font, fontScale, personcolors[p])
+        cv2.putText(img = frame, 
+                    text = str(p), 
+                    org = txtloc, 
+                    fontFace = font, 
+                    fontScale = fontScale, 
+                    color = personcolors[p],
+                    thickness = 2)
+
 
 def swapSeries(keypoints_array,v,c,pers1,pers2,start,end):
     """helper function for swapping sections of time series. This is useful because openpose isn't

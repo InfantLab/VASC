@@ -17,6 +17,8 @@ This folder contains
 
 In order to run the tutorial, download or clone a copy of the VASC project from GitHub to your local machine. You also need a copy of Python, a copy of OpenPose and some supporting software. Follow the install instructions on the [main page](https://github.com/InfantLab/VASC#installation) to install these prerequisites. 
 
+If you are unfamiliar with Jupyter Notebooks, there are [plenty](https://www.youtube.com/watch?v=3C9E2yPBw7s) of [introductory videos](https://www.youtube.com/watch?v=DKiI6NfSIe8) on [YouTube](https://www.youtube.com/results?search_query=learning+jupyter). You could also check out my [Notebooks Tutorial](https://github.com/InfantLab/NotebookDemos)/ 
+
 
 ## Step 1 - Processing the videos
 
@@ -86,26 +88,30 @@ This is the main interface to select individual videos and see if any relabellin
 
 <img src="step2.gui.png">
 
-In the control panel the first panel is a plot of the mean horizontal location of each participant in each frame of the video. This gives you an overview of their movement, how they have been labelled by Openpose and how many people OpenPose thinks are in the video. There is vertical line to identify the current frame (chosen by the slider).
+In the control panel the first panel is a plot of the mean horizontal location of each participant in each frame of the video. This gives you an overview of their movement, how they have been labelled by Openpose and how many people OpenPose thinks are in the video. There is vertical line to identify the current frame (chosen by the slider). In the current example this looks messy because OpenPose has been inconsistent in labelling people. 
 
 Below, you see the current frame overlaid with the OpenPose estimates of participant locations (including hand and finger location if includeHands = True). Each participant has a number corresponding to the label given to them by OpenPose. We will see below that these can often be highly inconsisten from frame to frame. 
 Below the frame image we have several drop-downs and buttons that let us interact with the code. There is also a slider that lets us select a different frame from the video. And finally a set of buttons that let us jump +/-1%, +/-10 frames or +/-1 frame. 
 
+#### Manual cleaning steps: 
 1. Use the first drop down to pick which video to process. 
 2. Sometimes we have multiple cameras, Select camera with best view of both participants - swap this to camera 1 (if multiple cameras).
 3. You might delete sets for whom all data is too poor quality. But they can also be excluded in **Step 3** by a flag in the data spreadsheet.
-4. Tag the infant and adult in first frame of interest. So both individuals should be in first frame.
-5. Try to automatically tag then in subsequent frames.
+4. Tag the infant and adult in first frame of interest. So both individuals should be in first frame. In the current example The adult has been labelled 1, while the child is 0. We always want child to be 0. So we use the `Swap to child(0)` button swap the data. 
+<img src="step2.swap.png">
+*Note that this swap applies to the current frame **and all subsequent frames**.  *
+
+5. Try to automatically tag then in subsequent frames. (See below)
 6. Manually fix anything the automatic process gets wrong.
-7. Exclude other detected people (3rd parties & false positives)
+7. Remove other detected people (3rd parties & false positives)
 
 ### Step 2.4. - Fix by location example
 
-To get around the quirks of OpenPose we to fix the labels. In the next image you see that for video `bb22644a_08-test-trials` the algorithm was highly inconsistent with it's labelling of the participants. 
+To get around the quirks of OpenPose we to fix the labels. In the next image you see that for video `bb22644a_08-test-trials` the algorithm was highly inconsistent with it's labelling of the participants.  (OpenPose doesn't compare one frame with another so it treats each on independently).
 
 <img src="datatoclean.png">
 
-Example of using the `Fix by Location` button. The algorithm starts assuming that individuals are correctly labelled in the first frame and then for each subsequent frame it assumes that the person nearest that location is also the same individual. (OpenPose doesn't compare one frame with another so it treats each on independently).  In many cases `Fix by Location` will correct the assignments. But if the data is noisy, some manual intervention will also be required.
+Example of using the `Fix by Location` button. The algorithm starts assuming that individuals are correctly labelled in the first frame and then for each subsequent frame it assumes that the person nearest that location is also the same individual.  In many cases `Fix by Location` will correct the assignments. But if the data is noisy, some manual intervention will also be required.
 
 <img src="cleandata.png">
 
@@ -115,9 +121,44 @@ Example of using the `Fix by Location` button. The algorithm starts assuming tha
 Once the data is cleaned we save in a multi-index dataframe to make analysis steps easier.
 <!-- #endregion -->
 
+<!-- #region -->
 ## Step 3 - Extracting Movement
 
 Open your copy of [Step3.ExtractMovement.ipynb](https://github.com/InfantLab/VASC/blob/master/Step3.ExtractMovement.ipynb) in Jupyter.
 
+### Steps 3.0-3.1 - Load data from Step 2.
+
+As before we first load the required Python libraries and the data processed in the previous Step.
+
+### Step  3.2.1 - Interpolate missing data. 
+
+We use numpy's built in `replace()` and `interpolate()` functions to linearly interpolate any gaps in the time series of each individual body and hand marker. 
+
+### Step 3.2.2 - Mean body part movements
+
+In some cases we might wish to know the avearge location of the head, body, arm or hand. To do this we average together all the points for a given body part and create a new time series for this point. Likewise we may with smooth the movement data by taking a moving average of several frames at once. Or look at the amount of movement by calculating a variance measure. 
+
+One slightly unusual calculation is our measure of mean Hand location. For this we give greater weight to the single wrist marker compared to the 21 points from the hand markers. 
+
+
+
+### Step 3.3 - Visualising the data.
+
+We provide another simple control panel to let users visually examine new calculated time series. Using the drop down menus, users can select a given video and look at time series of movements of individual body parts. For the Little Drummers study we were interested in vertical (y-axes) displacement of the hands. 
+
+<img src="step3.gui.png"> 
+
+### Step 3.4 - Looking at data trial by trial
+
+For the Little Drummers study we manually coded each video to indicate if the infants were visible in the video and if they were drumming and which (left, right, both) hands they were using. We also needed to know what type of trial it was and what target frequency infant may have seen. This information was entered in a spreadsheet. Here we load up that info so we can use it to process the data further.
+
+### Step 3.5 Finding fundamental frequency
+
+Once we know if an infant was drumming and which hand they used, we can use Fourier Transforms to find the main frequency of their drumming. For each child we plot the vertical (y-axis) displacement of the (averaged) hand location and then transform the time-series into a frequency plot. We filter slow movements (less than 1 Hertz) and plot the distribution of other frequencies. We use numpy's `argmax()` function to locate the maximum (fundamental) frequency. 
+
+
+<!-- #endregion -->
+
+### Bugs and Feedback
 
 If you have any comments or questions, either contact [Caspar Addyman <c.addyman@gold.ac.uk](mailto:c.addyman@gold.ac.uk) or submit an [issue report](https://github.com/InfantLab/VASC/issues).

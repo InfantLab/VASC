@@ -91,8 +91,6 @@ except Exception as e:
 
 anon = settings["flags"]["anon"]
 
-anon = settings["flags"]["anon"]
-
 includeHands = settings["flags"]["includeHands"]
 
 # ## 2.2 - Where are the data?
@@ -140,6 +138,7 @@ pprint(videos)
 # The `cleaned` flag tells us whether to start from original data or from a (partially) cleaned set.
 
 cleaned = settings["flags"]["cleaned"]
+#cleaned = False  #if you want to restart step 2, you can change the flag to False.
 
 # +
 if not cleaned:
@@ -298,14 +297,14 @@ button_swapchild = widgets.Button(description="Swap to child (0)")
 child = widgets.Dropdown(
     options = list(range(10)),
     value= 1,
-    description='Set: '
+    description='Person: '
 )
 babybox = widgets.HBox([button_swapchild, child])
 
 adult = widgets.Dropdown(
     options = list(range(10)),
     value= 0,
-    description='Set: '
+    description='Person: '
 )
 button_swapadult = widgets.Button(description="Swap to adult (1)")
 adultbox = widgets.HBox([button_swapadult,adult])
@@ -314,7 +313,7 @@ button_remove = widgets.Button(description="Remove these data")
 remove = widgets.Dropdown(
     options = list(range(10)),
     value= 2,
-    description='Set: '
+    description='Person: '
 )
 removebox = widgets.HBox([button_remove,remove])
 
@@ -584,10 +583,6 @@ output
 #
 #
 
-# ### Step 2.5: TODO - Interpolate missing data
-#
-# There are still likely to be gaps. We need to decide what to do about those.  At the moment interpolation is done by scipy in the Step 3 code.
-#
 # #### Step 2.5.1. TODO - autofix to cope with missing data
 #
 # Missing data currently confuses autofix and on it's own interpolation won't help here. Because you can't interpolate until you know who is who. Our current approach is to let autofix by location use a moving average of several previous frames.
