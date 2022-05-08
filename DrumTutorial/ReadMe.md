@@ -99,7 +99,7 @@ Below the frame image we have several drop-downs and buttons that let us interac
 3. You might delete sets for whom all data is too poor quality. But they can also be excluded in **Step 3** by a flag in the data spreadsheet.
 4. Tag the infant and adult in first frame of interest. So both individuals should be in first frame. In the current example The adult has been labelled 1, while the child is 0. We always want child to be 0. So we use the `Swap to child(0)` button swap the data. 
 <img src="step2.swap.png">
-*Note that this swap applies to the current frame **and all subsequent frames**.  *
+*Note that this swap applies to the current frame* **and all subsequent frames**.  
 
 5. Try to automatically tag then in subsequent frames. (See below)
 6. Manually fix anything the automatic process gets wrong.
@@ -155,6 +155,9 @@ For the Little Drummers study we manually coded each video to indicate if the in
 ### Step 3.5 Finding fundamental frequency
 
 Once we know if an infant was drumming and which hand they used, we can use Fourier Transforms to find the main frequency of their drumming. For each child we plot the vertical (y-axis) displacement of the (averaged) hand location and then transform the time-series into a frequency plot. We filter slow movements (less than 1 Hertz) and plot the distribution of other frequencies. We use numpy's `argmax()` function to locate the maximum (fundamental) frequency. 
+
+<img src="1fa339b.trial3.ISI500.png">
+*Plots for infant 1fa3339b Trial 3. The target interstimulus interval as 500ms, (2Hz). The left most plot shows the vertical displacement of the left hand, the next plot shows the corresponding frequency plot. The other two plots show same info for right hand. The infant was drummming with frequency of 2.27 Hz, an ISI of 440ms.
 
 
 <!-- #endregion -->

@@ -577,7 +577,6 @@ excelfile = videos_out  + "\\LittleDrummers_TutorialManualCoding.xlsx"
 
 manualcoding = pd.read_excel(excelfile, sheet_name = "ManualCoding",  header=[0,1])
 
-#fourier = pd.read_excel(excelfile, sheet_name = "Fourier.All.0.5Hzcuttoff",  header=[0,1])
 fourier = pd.read_excel(excelfile, sheet_name = "Fourier.All.1.0Hzcuttoff",  header=[0,1])
 
 nchildren = len(manualcoding)
@@ -589,7 +588,7 @@ print(f"Fourier data sheet contains {len(fourier)} rows.")
 
 # ## Step 3.4.1 Find trial info
 #
-# For each trail we need to know the target inter stimulus interval (ISI) for each trial. For children in condition 0 the trial order was (400, 600, 500, 700), in condition 1 the order was (700,500,600,400). Then we need to know 
+# For each trail we need to know the target inter stimulus interval (ISI) for each trial. For children in condition 0 the trial order was (SMT1, 400, 600, 500, 700, SMT2), in condition 1 the order was (SMT1, 700,500,600,400, SMT2). We create few helper functions to keep track of this and read information from the manual coding spreadsheet. 
 
 # +
 #Create a look up arrays to find out the ISI for each trial + condition
@@ -628,7 +627,7 @@ def vidStringtoTrialName(vidString):
 #see if it works as expected
 print(trialNames[500][0])
 print(trialTypes["Trial4"][1])
-vidstring = "16d2b71_12-test-trials"
+vidstring = "1fa339b_12-test-trials"
 print(vidStringtoTrialName(vidstring))
 
 
@@ -702,6 +701,7 @@ def annotate_axes(ax, text, fontsize=18):
 # +
 trial = TrialInfo(manualcoding, fourier,vidstring)
 print(trial.ID)
+print(trial.error)
 print(trial.respcompleted)
 print(trial.inView )
 
@@ -782,10 +782,9 @@ for vid in videos:
         frames = videos[vid]['camera1']['frames']    #how many frames?
         start = videos[vid][cam]["start"] 
         end = videos[vid][cam]["end"]
-        sampleframes = end - start
         fps = videos[vid]['camera1']['fps']          #how many frames per second?
-        x_data = np.linspace(start,end,sampleframes+1)      #x axis
-        x_time = x_data / fps                        #x axis in units of time (seconds)
+        #sampleframes = end - start
+
         if plotgraphs:
             fig, axs = plt.subplots(ncols=4, nrows=1, figsize=(18, 4), constrained_layout=True)
 
@@ -810,6 +809,9 @@ for vid in videos:
 
                 #we are just interested in the periodic elements (not absolute value above zero) so substract the mean
                 y_normed = np.subtract(y_data,np.average(y_data))
+
+                x_data = np.linspace(start,start+len(y_data),len(y_data))      #x axis
+                x_time = x_data / fps                        #x axis in units of time (seconds)
 
                 try:
                     yfft = scipy.fft.rfft(y_normed)
@@ -906,13 +908,14 @@ for vid in videos:
 
 
 
+
+
 # -
 
 
 #save the fitted parameters.
 resultLeft.to_excel(videos_out  + "\\LeftHand.FixedBinFreq.xlsx")
 resultRight.to_excel(videos_out  + "\\RightHand.FixedBinFreq.xlsx")
-
 
 
 def plotHistograms(targetISI,fs):
